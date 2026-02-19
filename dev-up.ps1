@@ -39,7 +39,7 @@ try {
     Write-Host ""
     Write-Host "  Admin login:"
     Write-Host "    Email:    admin@seems.local"
-    Write-Host "    Password: Admin@123"
+    Write-Host "    Password: (see ADMIN_DEFAULT_PASSWORD in .env)"
     Write-Host "=========================================="
     Write-Host ""
     Write-Host "Press Ctrl+C to stop..."
