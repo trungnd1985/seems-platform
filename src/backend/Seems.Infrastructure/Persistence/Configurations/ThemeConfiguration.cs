@@ -12,5 +12,6 @@ public class ThemeConfiguration : IEntityTypeConfiguration<Theme>
         builder.HasIndex(e => e.Key).IsUnique();
         builder.Property(e => e.Key).HasMaxLength(128).IsRequired();
         builder.Property(e => e.Name).HasMaxLength(256).IsRequired();
+        builder.Property(e => e.Description).HasMaxLength(1024);
     }
 }
