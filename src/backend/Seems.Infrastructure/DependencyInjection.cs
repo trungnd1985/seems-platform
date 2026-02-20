@@ -9,6 +9,7 @@ using Seems.Domain.Interfaces;
 using Seems.Infrastructure.Identity;
 using Seems.Infrastructure.Persistence;
 using Seems.Infrastructure.Persistence.Repositories;
+using Seems.Infrastructure.Storage;
 
 namespace Seems.Infrastructure;
 
@@ -31,12 +32,18 @@ public static class DependencyInjection
             .AddEntityFrameworkStores<AppDbContext>()
             .AddDefaultTokenProviders();
 
+        services.AddScoped<IAppDbContext>(sp => sp.GetRequiredService<AppDbContext>());
         services.AddScoped<IUnitOfWork, UnitOfWork>();
         services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
         services.AddScoped<IPageRepository, PageRepository>();
         services.AddScoped<IContentRepository, ContentRepository>();
         services.AddScoped<IJwtTokenService, JwtTokenService>();
         services.AddScoped<ICurrentUser, CurrentUser>();
+
+        // Storage providers
+        services.AddScoped<IStorageProvider, LocalStorageProvider>();
+        services.AddScoped<IStorageProvider, S3StorageProvider>();
+        services.AddScoped<IStorageProviderFactory, StorageProviderFactory>();
 
         return services;
     }
