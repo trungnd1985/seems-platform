@@ -76,6 +76,15 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseCors();
+
+// Ensure wwwroot exists for local file storage, then serve static files
+var webRootPath = app.Environment.WebRootPath ?? Path.Combine(app.Environment.ContentRootPath, "wwwroot");
+Directory.CreateDirectory(webRootPath);
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(webRootPath),
+    RequestPath = "",
+});
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
