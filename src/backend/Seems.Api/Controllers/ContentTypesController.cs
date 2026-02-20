@@ -1,47 +1,51 @@
-using AutoMapper;
+using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Seems.Application.Content.Dtos;
-using Seems.Domain.Entities;
-using Seems.Domain.Interfaces;
+using Seems.Application.ContentTypes.Commands.CreateContentType;
+using Seems.Application.ContentTypes.Commands.DeleteContentType;
+using Seems.Application.ContentTypes.Commands.UpdateContentType;
+using Seems.Application.ContentTypes.Queries.GetContentType;
+using Seems.Application.ContentTypes.Queries.ListContentTypes;
 
 namespace Seems.Api.Controllers;
 
 [ApiController]
 [Route("api/content-types")]
 [Authorize]
-public class ContentTypesController(IRepository<ContentType> repository, IUnitOfWork unitOfWork, IMapper mapper)
-    : ControllerBase
+public class ContentTypesController(ISender sender) : ControllerBase
 {
     [HttpGet]
-    public async Task<ActionResult<IReadOnlyList<ContentTypeDto>>> List()
-    {
-        var items = await repository.GetAllAsync();
-        return Ok(mapper.Map<IReadOnlyList<ContentTypeDto>>(items));
-    }
+    public async Task<ActionResult<IReadOnlyList<ContentTypeDto>>> List(CancellationToken ct)
+        => Ok(await sender.Send(new ListContentTypesQuery(), ct));
 
     [HttpGet("{id:guid}")]
-    public async Task<ActionResult<ContentTypeDto>> Get(Guid id)
-    {
-        var item = await repository.GetByIdAsync(id);
-        return item is null ? NotFound() : Ok(mapper.Map<ContentTypeDto>(item));
-    }
+    public async Task<ActionResult<ContentTypeDto>> Get(Guid id, CancellationToken ct)
+        => Ok(await sender.Send(new GetContentTypeQuery(id), ct));
 
     [HttpPost]
-    public async Task<ActionResult<ContentTypeDto>> Create([FromBody] ContentTypeDto dto)
+    public async Task<ActionResult<ContentTypeDto>> Create(
+        [FromBody] CreateContentTypeRequest body,
+        CancellationToken ct)
     {
-        var entity = new ContentType
-        {
-            Id = Guid.NewGuid(),
-            Key = dto.Key,
-            Name = dto.Name,
-            Schema = dto.Schema,
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow,
-        };
+        var result = await sender.Send(new CreateContentTypeCommand(body.Key, body.Name, body.Schema), ct);
+        return CreatedAtAction(nameof(Get), new { id = result.Id }, result);
+    }
 
-        await repository.AddAsync(entity);
-        await unitOfWork.SaveChangesAsync();
-        return CreatedAtAction(nameof(Get), new { id = entity.Id }, mapper.Map<ContentTypeDto>(entity));
+    [HttpPut("{id:guid}")]
+    public async Task<ActionResult<ContentTypeDto>> Update(
+        Guid id,
+        [FromBody] UpdateContentTypeRequest body,
+        CancellationToken ct)
+        => Ok(await sender.Send(new UpdateContentTypeCommand(id, body.Name, body.Schema), ct));
+
+    [HttpDelete("{id:guid}")]
+    public async Task<IActionResult> Delete(Guid id, CancellationToken ct)
+    {
+        await sender.Send(new DeleteContentTypeCommand(id), ct);
+        return NoContent();
     }
 }
+
+public record CreateContentTypeRequest(string Key, string Name, string Schema);
+public record UpdateContentTypeRequest(string Name, string Schema);
