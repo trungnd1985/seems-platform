@@ -165,3 +165,6 @@ accept: () => myAsyncFn()           // wrong — returns a Promise
 ## System Roles
 Admin, Editor, Viewer are seeded system roles.
 Name changes and deletion are blocked server-side in all role handlers.
+
+## Git Conventions
+- Never add a `Co-Authored-By: Claude` trailer to commits.
