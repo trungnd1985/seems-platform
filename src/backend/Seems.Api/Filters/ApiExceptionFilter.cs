@@ -42,6 +42,15 @@ public class ApiExceptionFilter(ILogger<ApiExceptionFilter> logger) : IException
                 context.ExceptionHandled = true;
                 break;
 
+            case InvalidOperationException:
+                context.Result = new ConflictObjectResult(new
+                {
+                    status = 409,
+                    message = context.Exception.Message,
+                });
+                context.ExceptionHandled = true;
+                break;
+
             default:
                 logger.LogError(context.Exception, "Unhandled exception");
                 context.Result = new ObjectResult(new

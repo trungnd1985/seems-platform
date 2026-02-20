@@ -1,12 +1,14 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import Menu from 'primevue/menu'
 import type { MenuItem } from 'primevue/menuitem'
+import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
+const auth = useAuthStore()
 
-const menuItems = ref<MenuItem[]>([
+const menuItems = computed<MenuItem[]>(() => [
   {
     label: 'Dashboard',
     icon: 'pi pi-home',
@@ -63,6 +65,20 @@ const menuItems = ref<MenuItem[]>([
         icon: 'pi pi-box',
         command: () => router.push({ name: 'modules' }),
       },
+      ...(auth.user?.roles.includes('Admin')
+        ? [
+            {
+              label: 'Users',
+              icon: 'pi pi-users',
+              command: () => router.push({ name: 'users' }),
+            },
+            {
+              label: 'Roles',
+              icon: 'pi pi-shield',
+              command: () => router.push({ name: 'roles' }),
+            },
+          ]
+        : []),
       {
         label: 'Settings',
         icon: 'pi pi-cog',

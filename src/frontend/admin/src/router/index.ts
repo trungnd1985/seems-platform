@@ -55,6 +55,18 @@ const router = createRouter({
           component: () => import('@/views/modules/ModuleListView.vue'),
         },
         {
+          path: 'roles',
+          name: 'roles',
+          component: () => import('@/views/roles/RoleListView.vue'),
+          meta: { roles: ['Admin'] },
+        },
+        {
+          path: 'users',
+          name: 'users',
+          component: () => import('@/views/users/UserListView.vue'),
+          meta: { roles: ['Admin'] },
+        },
+        {
           path: 'settings',
           name: 'settings',
           component: () => import('@/views/settings/SiteSettingsView.vue'),
@@ -66,8 +78,14 @@ const router = createRouter({
 
 router.beforeEach((to) => {
   const auth = useAuthStore()
+
   if (!to.meta.public && !auth.isAuthenticated) {
     return { name: 'login', query: { redirect: to.fullPath } }
+  }
+
+  const requiredRoles = to.meta.roles as string[] | undefined
+  if (requiredRoles && auth.user && !requiredRoles.some((r) => auth.user!.roles.includes(r))) {
+    return { name: 'dashboard' }
   }
 })
 
