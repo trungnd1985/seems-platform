@@ -4,6 +4,7 @@ using Seems.Application.Identity.Dtos;
 using Seems.Application.Media.Dtos;
 using Seems.Application.Pages.Dtos;
 using Seems.Application.Templates.Dtos;
+using Seems.Application.Themes.Dtos;
 using Seems.Domain.Entities;
 using Seems.Domain.Entities.Identity;
 
@@ -18,6 +19,7 @@ public class MappingProfile : Profile
         CreateMap<ContentType, ContentTypeDto>();
         CreateMap<ContentItem, ContentItemDto>();
         CreateMap<Template, TemplateDto>();
+        CreateMap<Theme, ThemeDto>();
         CreateMap<Domain.Entities.Media, MediaDto>();
         CreateMap<AppUser, UserDto>()
             .ForMember(d => d.Roles, opt => opt.Ignore());
