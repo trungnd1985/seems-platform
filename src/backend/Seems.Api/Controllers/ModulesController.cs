@@ -1,19 +1,28 @@
+using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Seems.Domain.Entities;
-using Seems.Domain.Interfaces;
+using Seems.Application.Modules.Dtos;
+using Seems.Application.Modules.Queries.ListInstalledModules;
+using Seems.Application.Modules.Queries.ListModules;
 
 namespace Seems.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize]
-public class ModulesController(IRepository<Module> repository) : ControllerBase
+public class ModulesController(ISender sender) : ControllerBase
 {
+    /// <summary>Admin list — all modules regardless of status.</summary>
     [HttpGet]
-    public async Task<IActionResult> List()
-    {
-        var items = await repository.GetAllAsync();
-        return Ok(items);
-    }
+    [Authorize]
+    public async Task<ActionResult<IReadOnlyList<ModuleDto>>> List(CancellationToken ct)
+        => Ok(await sender.Send(new ListModulesQuery(), ct));
+
+    /// <summary>
+    /// Public endpoint consumed by the Nuxt plugin at app startup.
+    /// Returns only Installed modules that have a PublicComponentUrl.
+    /// </summary>
+    [HttpGet("installed")]
+    [AllowAnonymous]
+    public async Task<ActionResult<IReadOnlyList<InstalledModuleDto>>> ListInstalled(CancellationToken ct)
+        => Ok(await sender.Send(new ListInstalledModulesQuery(), ct));
 }

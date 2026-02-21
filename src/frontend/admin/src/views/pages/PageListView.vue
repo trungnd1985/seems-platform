@@ -141,7 +141,8 @@ function cancelDelete() {
     <DataTable :value="pages" :loading="loading" striped-rows class="pages-table">
       <Column field="slug" header="Slug" style="width: 220px">
         <template #body="{ data }">
-          <code class="key-badge">{{ data.slug }}</code>
+          <code v-if="data.slug" class="key-badge">{{ data.slug }}</code>
+          <span v-else class="text-muted">— (home)</span>
         </template>
       </Column>
 
@@ -299,6 +300,11 @@ function cancelDelete() {
 
 .home-tag {
   font-size: 0.7rem;
+}
+
+.text-muted {
+  color: var(--p-text-muted-color);
+  font-size: 0.875rem;
 }
 
 .date-cell {

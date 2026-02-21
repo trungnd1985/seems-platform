@@ -194,17 +194,21 @@ function submit() {
             </div>
 
             <div class="field">
-              <label for="pg-slug">Slug <span class="required">*</span></label>
+              <label for="pg-slug">Slug <span v-if="!page?.isDefault" class="required">*</span></label>
               <InputText
                 id="pg-slug"
                 v-model="form.slug"
                 placeholder="e.g. about-us"
                 maxlength="256"
                 fluid
+                :disabled="page?.isDefault"
                 :invalid="slugInvalid"
                 @input="onSlugInput"
               />
-              <small v-if="slugInvalid" class="hint error">
+              <small v-if="page?.isDefault" class="hint info">
+                The home page is resolved by the Default flag, not by slug.
+              </small>
+              <small v-else-if="slugInvalid" class="hint error">
                 Slug must be lowercase and contain only letters, digits, hyphens, underscores, or
                 forward slashes.
               </small>
@@ -395,6 +399,10 @@ function submit() {
 
 .hint.error {
   color: var(--p-red-500);
+}
+
+.hint.info {
+  color: var(--p-blue-500);
 }
 
 .hint.warn {

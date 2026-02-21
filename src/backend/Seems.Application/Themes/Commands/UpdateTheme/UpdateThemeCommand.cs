@@ -6,5 +6,6 @@ namespace Seems.Application.Themes.Commands.UpdateTheme;
 public record UpdateThemeCommand(
     Guid Id,
     string Name,
-    string? Description
+    string? Description,
+    string? CssUrl
 ) : IRequest<ThemeDto>;

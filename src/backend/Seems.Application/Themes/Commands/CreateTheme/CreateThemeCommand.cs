@@ -6,5 +6,6 @@ namespace Seems.Application.Themes.Commands.CreateTheme;
 public record CreateThemeCommand(
     string Key,
     string Name,
-    string? Description
+    string? Description,
+    string? CssUrl
 ) : IRequest<ThemeDto>;

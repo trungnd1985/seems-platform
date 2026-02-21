@@ -2,6 +2,7 @@
 import { usePageResolver } from '~/composables/usePageResolver'
 import { useSeo } from '~/composables/useSeo'
 import { useTemplateResolver } from '~/composables/useTemplateResolver'
+import { useTheme } from '~/composables/useTheme'
 
 const route = useRoute()
 const slug = computed(() => {
@@ -19,9 +20,11 @@ if (page.value) {
   useSeo(page.value.seo)
 }
 
+useTheme(page.value?.themeKey)
+
 const templateComponent = computed(() => {
   if (!page.value) return null
-  return useTemplateResolver(page.value.templateKey)
+  return useTemplateResolver(page.value.templateKey, page.value.themeKey)
 })
 </script>
 

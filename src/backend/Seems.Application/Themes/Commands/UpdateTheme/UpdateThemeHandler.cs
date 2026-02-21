@@ -19,6 +19,7 @@ public class UpdateThemeHandler(
 
         entity.Name = request.Name;
         entity.Description = request.Description;
+        entity.CssUrl = request.CssUrl;
         entity.UpdatedAt = DateTime.UtcNow;
 
         repository.Update(entity);

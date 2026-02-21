@@ -13,12 +13,13 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   'update:visible': [value: boolean]
-  saved: [payload: { key: string; name: string; description: string | null }]
+  saved: [payload: { key: string; name: string; description: string | null; cssUrl: string | null }]
 }>()
 
 const key = ref('')
 const name = ref('')
 const description = ref('')
+const cssUrl = ref('')
 
 watch(
   () => props.theme,
@@ -26,6 +27,7 @@ watch(
     key.value = t?.key ?? ''
     name.value = t?.name ?? ''
     description.value = t?.description ?? ''
+    cssUrl.value = t?.cssUrl ?? ''
   },
   { immediate: true },
 )
@@ -41,6 +43,7 @@ function submit() {
     key: key.value.trim(),
     name: name.value.trim(),
     description: description.value.trim() || null,
+    cssUrl: cssUrl.value.trim() || null,
   })
 }
 </script>
@@ -92,6 +95,18 @@ function submit() {
           maxlength="1024"
           fluid
         />
+      </div>
+
+      <div class="field">
+        <label for="theme-css-url">CSS URL</label>
+        <InputText
+          id="theme-css-url"
+          v-model="cssUrl"
+          placeholder="https://cdn.example.com/themes/my-theme/style.css"
+          maxlength="2048"
+          fluid
+        />
+        <small class="hint">Public URL to the theme stylesheet. Leave blank if styles are not yet deployed.</small>
       </div>
     </form>
 
