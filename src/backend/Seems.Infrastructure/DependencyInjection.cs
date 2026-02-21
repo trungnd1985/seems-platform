@@ -39,6 +39,8 @@ public static class DependencyInjection
         services.AddScoped<IContentRepository, ContentRepository>();
         services.AddScoped<IJwtTokenService, JwtTokenService>();
         services.AddScoped<ICurrentUser, CurrentUser>();
+        services.AddHttpContextAccessor();
+        services.AddScoped<IPreviewContext, PreviewContext>();
 
         // Storage providers
         services.AddScoped<IStorageProvider, LocalStorageProvider>();

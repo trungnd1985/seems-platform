@@ -3,6 +3,7 @@ using AutoMapper;
 using Seems.Application.Content.Dtos;
 using Seems.Application.Identity.Dtos;
 using Seems.Application.Media.Dtos;
+using Seems.Application.Modules.Dtos;
 using Seems.Application.Pages.Dtos;
 using Seems.Application.Templates.Dtos;
 using Seems.Application.Themes.Dtos;
@@ -18,13 +19,18 @@ public class MappingProfile : Profile
         CreateMap<Page, PageDto>();
         CreateMap<SlotMapping, SlotMappingDto>();
         CreateMap<ContentType, ContentTypeDto>();
-        CreateMap<ContentItem, ContentItemDto>();
+        CreateMap<ContentItem, ContentItemDto>()
+            .ForMember(d => d.Data, opt => opt.MapFrom(s =>
+                JsonSerializer.Deserialize<JsonElement>(
+                    string.IsNullOrWhiteSpace(s.Data) ? "{}" : s.Data)));
         CreateMap<Template, TemplateDto>()
             .ForMember(d => d.Slots, opt => opt.MapFrom(s =>
                 JsonSerializer.Deserialize<List<TemplateSlotDef>>(
                     string.IsNullOrEmpty(s.Slots) ? "[]" : s.Slots) ?? new List<TemplateSlotDef>()))
             .ForMember(d => d.ThemeExists, opt => opt.Ignore());
         CreateMap<Theme, ThemeDto>();
+        CreateMap<Module, ModuleDto>();
+        CreateMap<Module, InstalledModuleDto>();
         CreateMap<Domain.Entities.Media, MediaDto>();
         CreateMap<AppUser, UserDto>()
             .ForMember(d => d.Roles, opt => opt.Ignore());

@@ -13,5 +13,6 @@ public class ThemeConfiguration : IEntityTypeConfiguration<Theme>
         builder.Property(e => e.Key).HasMaxLength(128).IsRequired();
         builder.Property(e => e.Name).HasMaxLength(256).IsRequired();
         builder.Property(e => e.Description).HasMaxLength(1024);
+        builder.Property(e => e.CssUrl).HasMaxLength(2048);
     }
 }

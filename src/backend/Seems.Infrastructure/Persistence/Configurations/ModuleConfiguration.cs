@@ -14,5 +14,6 @@ public class ModuleConfiguration : IEntityTypeConfiguration<Module>
         builder.Property(e => e.Name).HasMaxLength(256).IsRequired();
         builder.Property(e => e.Version).HasMaxLength(64).IsRequired();
         builder.Property(e => e.Status).HasConversion<string>().HasMaxLength(32);
+        builder.Property(e => e.PublicComponentUrl).HasMaxLength(2048);
     }
 }

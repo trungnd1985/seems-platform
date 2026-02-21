@@ -206,7 +206,7 @@ public static class DataSeeder
         var homepage = new Page
         {
             Id = Guid.Parse("00000000-0000-0000-0004-000000000001"),
-            Slug = "/",
+            Slug = "",
             Title = "Home",
             TemplateKey = "standard-page",
             ThemeKey = "default",
@@ -218,6 +218,7 @@ public static class DataSeeder
                 OgDescription = "WordPress flexibility + Strapi headless + ASP.NET Core + Nuxt 3",
             },
             Status = ContentStatus.Published,
+            IsDefault = true,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow,
         };

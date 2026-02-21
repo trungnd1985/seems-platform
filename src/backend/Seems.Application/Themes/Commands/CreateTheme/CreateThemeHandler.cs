@@ -24,6 +24,7 @@ public class CreateThemeHandler(
             Key = request.Key,
             Name = request.Name,
             Description = request.Description,
+            CssUrl = request.CssUrl,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow,
         };

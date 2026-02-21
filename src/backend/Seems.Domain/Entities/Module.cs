@@ -9,4 +9,5 @@ public class Module : BaseEntity
     public string Name { get; set; } = string.Empty;
     public string Version { get; set; } = string.Empty;
     public ModuleStatus Status { get; set; } = ModuleStatus.Installed;
+    public string? PublicComponentUrl { get; set; }
 }

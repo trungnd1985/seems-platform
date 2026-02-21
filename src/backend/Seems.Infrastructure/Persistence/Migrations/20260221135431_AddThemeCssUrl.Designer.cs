@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Seems.Infrastructure.Persistence;
@@ -11,9 +12,11 @@ using Seems.Infrastructure.Persistence;
 namespace Seems.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260221135431_AddThemeCssUrl")]
+    partial class AddThemeCssUrl
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -413,10 +416,6 @@ namespace Seems.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)");
-
-                    b.Property<string>("PublicComponentUrl")
-                        .HasMaxLength(2048)
-                        .HasColumnType("character varying(2048)");
 
                     b.Property<string>("Status")
                         .IsRequired()

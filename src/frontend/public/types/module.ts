@@ -11,3 +11,10 @@ export interface ModuleComponent {
   componentName: string
   loader: () => Promise<unknown>
 }
+
+export interface InstalledModule {
+  moduleKey: string
+  name: string
+  version: string
+  publicComponentUrl?: string
+}

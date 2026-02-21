@@ -6,6 +6,7 @@ using Seems.Application.Themes.Commands.DeleteTheme;
 using Seems.Application.Themes.Commands.UpdateTheme;
 using Seems.Application.Themes.Dtos;
 using Seems.Application.Themes.Queries.GetTheme;
+using Seems.Application.Themes.Queries.GetThemeByKey;
 using Seems.Application.Themes.Queries.ListThemes;
 
 namespace Seems.Api.Controllers;
@@ -23,12 +24,20 @@ public class ThemesController(ISender sender) : ControllerBase
     public async Task<ActionResult<ThemeDto>> Get(Guid id, CancellationToken ct)
         => Ok(await sender.Send(new GetThemeQuery(id), ct));
 
+    [HttpGet("by-key/{key}")]
+    [AllowAnonymous]
+    public async Task<ActionResult<ThemeDto>> GetByKey(string key, CancellationToken ct)
+    {
+        var result = await sender.Send(new GetThemeByKeyQuery(key), ct);
+        return result is null ? NotFound() : Ok(result);
+    }
+
     [HttpPost]
     public async Task<ActionResult<ThemeDto>> Create(
         [FromBody] CreateThemeRequest body,
         CancellationToken ct)
     {
-        var result = await sender.Send(new CreateThemeCommand(body.Key, body.Name, body.Description), ct);
+        var result = await sender.Send(new CreateThemeCommand(body.Key, body.Name, body.Description, body.CssUrl), ct);
         return CreatedAtAction(nameof(Get), new { id = result.Id }, result);
     }
 
@@ -37,7 +46,7 @@ public class ThemesController(ISender sender) : ControllerBase
         Guid id,
         [FromBody] UpdateThemeRequest body,
         CancellationToken ct)
-        => Ok(await sender.Send(new UpdateThemeCommand(id, body.Name, body.Description), ct));
+        => Ok(await sender.Send(new UpdateThemeCommand(id, body.Name, body.Description, body.CssUrl), ct));
 
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> Delete(Guid id, CancellationToken ct)
@@ -47,5 +56,5 @@ public class ThemesController(ISender sender) : ControllerBase
     }
 }
 
-public record CreateThemeRequest(string Key, string Name, string? Description);
-public record UpdateThemeRequest(string Name, string? Description);
+public record CreateThemeRequest(string Key, string Name, string? Description, string? CssUrl);
+public record UpdateThemeRequest(string Name, string? Description, string? CssUrl);

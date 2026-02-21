@@ -32,10 +32,10 @@ function openEdit(theme: Theme) {
   formDialogVisible.value = true
 }
 
-async function onSaved(payload: { key: string; name: string; description: string | null }) {
+async function onSaved(payload: { key: string; name: string; description: string | null; cssUrl: string | null }) {
   try {
     if (selectedTheme.value) {
-      await updateTheme(selectedTheme.value.id, { name: payload.name, description: payload.description })
+      await updateTheme(selectedTheme.value.id, { name: payload.name, description: payload.description, cssUrl: payload.cssUrl })
       toast.add({ severity: 'success', summary: 'Theme updated', life: 3000 })
     } else {
       await createTheme(payload)
@@ -120,6 +120,19 @@ function cancelDelete() {
       <Column field="description" header="Description">
         <template #body="{ data }">
           <span class="text-muted">{{ data.description ?? '—' }}</span>
+        </template>
+      </Column>
+
+      <Column field="cssUrl" header="CSS URL">
+        <template #body="{ data }">
+          <a
+            v-if="data.cssUrl"
+            :href="data.cssUrl"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="css-url-link"
+          >{{ data.cssUrl }}</a>
+          <span v-else class="text-muted">—</span>
         </template>
       </Column>
 
@@ -229,6 +242,22 @@ function cancelDelete() {
 .text-muted {
   color: var(--p-text-muted-color);
   font-size: 0.875rem;
+}
+
+.css-url-link {
+  font-size: 0.8125rem;
+  color: var(--p-primary-color);
+  text-decoration: none;
+  max-width: 280px;
+  display: inline-block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+.css-url-link:hover {
+  text-decoration: underline;
 }
 
 .actions {

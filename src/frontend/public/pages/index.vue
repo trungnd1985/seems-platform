@@ -1,17 +1,20 @@
 <script setup lang="ts">
-import { usePageResolver } from '~/composables/usePageResolver'
+import { useDefaultPageResolver } from '~/composables/useDefaultPageResolver'
 import { useSeo } from '~/composables/useSeo'
 import { useTemplateResolver } from '~/composables/useTemplateResolver'
+import { useTheme } from '~/composables/useTheme'
 
-const { data: page, error } = await usePageResolver('/')
+const { data: page, error } = await useDefaultPageResolver()
 
 if (page.value) {
   useSeo(page.value.seo)
 }
 
+useTheme(page.value?.themeKey)
+
 const templateComponent = computed(() => {
   if (!page.value) return null
-  return useTemplateResolver(page.value.templateKey)
+  return useTemplateResolver(page.value.templateKey, page.value.themeKey)
 })
 </script>
 

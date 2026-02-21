@@ -12,6 +12,11 @@ public class PageRepository(AppDbContext context) : Repository<Page>(context), I
             .Include(p => p.Slots.OrderBy(s => s.Order))
             .FirstOrDefaultAsync(p => p.Slug == slug, ct);
 
+    public async Task<Page?> GetPublishedBySlugAsync(string slug, CancellationToken ct = default)
+        => await DbSet
+            .Include(p => p.Slots.OrderBy(s => s.Order))
+            .FirstOrDefaultAsync(p => p.Slug == slug && p.Status == ContentStatus.Published, ct);
+
     public async Task<IReadOnlyList<Page>> GetPublishedPagesAsync(CancellationToken ct = default)
         => await DbSet
             .Where(p => p.Status == ContentStatus.Published)
