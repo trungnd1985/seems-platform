@@ -6,5 +6,8 @@ public class TemplateDto
     public string Key { get; set; } = string.Empty;
     public string Name { get; set; } = string.Empty;
     public string ThemeKey { get; set; } = string.Empty;
-    public string Slots { get; set; } = "[]";
+    public bool ThemeExists { get; set; }
+    public IReadOnlyList<TemplateSlotDef> Slots { get; set; } = [];
+    public DateTime CreatedAt { get; set; }
+    public DateTime UpdatedAt { get; set; }
 }
