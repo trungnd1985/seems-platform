@@ -12,6 +12,7 @@ public class Page : BaseEntity
     public string? ThemeKey { get; set; }
     public SeoMeta Seo { get; set; } = new();
     public ContentStatus Status { get; set; } = ContentStatus.Draft;
+    public bool IsDefault { get; set; }
 
     public ICollection<SlotMapping> Slots { get; set; } = [];
 }

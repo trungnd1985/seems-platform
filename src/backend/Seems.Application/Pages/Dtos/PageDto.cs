@@ -11,6 +11,7 @@ public class PageDto
     public string? ThemeKey { get; set; }
     public SeoMeta Seo { get; set; } = new();
     public string Status { get; set; } = string.Empty;
+    public bool IsDefault { get; set; }
     public ICollection<SlotMappingDto> Slots { get; set; } = [];
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
@@ -18,6 +19,7 @@ public class PageDto
 
 public class SlotMappingDto
 {
+    public Guid Id { get; set; }
     public string SlotKey { get; set; } = string.Empty;
     public string TargetType { get; set; } = string.Empty;
     public string TargetId { get; set; } = string.Empty;
