@@ -1,3 +1,4 @@
+using System.Text.Json;
 using AutoMapper;
 using Seems.Application.Content.Dtos;
 using Seems.Application.Identity.Dtos;
@@ -18,7 +19,11 @@ public class MappingProfile : Profile
         CreateMap<SlotMapping, SlotMappingDto>();
         CreateMap<ContentType, ContentTypeDto>();
         CreateMap<ContentItem, ContentItemDto>();
-        CreateMap<Template, TemplateDto>();
+        CreateMap<Template, TemplateDto>()
+            .ForMember(d => d.Slots, opt => opt.MapFrom(s =>
+                JsonSerializer.Deserialize<List<TemplateSlotDef>>(
+                    string.IsNullOrEmpty(s.Slots) ? "[]" : s.Slots) ?? new List<TemplateSlotDef>()))
+            .ForMember(d => d.ThemeExists, opt => opt.Ignore());
         CreateMap<Theme, ThemeDto>();
         CreateMap<Domain.Entities.Media, MediaDto>();
         CreateMap<AppUser, UserDto>()
