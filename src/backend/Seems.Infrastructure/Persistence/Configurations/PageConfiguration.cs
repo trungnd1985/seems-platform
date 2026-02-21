@@ -11,6 +11,11 @@ public class PageConfiguration : IEntityTypeConfiguration<Page>
         builder.HasKey(e => e.Id);
         builder.HasIndex(e => e.Slug).IsUnique();
 
+        // Filtered unique index: at most one row may have IsDefault = true
+        builder.HasIndex(e => e.IsDefault)
+            .IsUnique()
+            .HasFilter("\"IsDefault\" = true");
+
         builder.Property(e => e.Slug).HasMaxLength(256).IsRequired();
         builder.Property(e => e.Title).HasMaxLength(512).IsRequired();
         builder.Property(e => e.TemplateKey).HasMaxLength(128).IsRequired();
