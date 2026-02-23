@@ -110,6 +110,7 @@ function moveDown(index: number) {
               <code class="field-name">{{ field.name }}</code>
               <Tag :value="FIELD_TYPE_LABELS[field.type]" severity="secondary" />
               <Tag v-if="field.required" value="required" severity="warn" />
+              <Tag v-if="field.searchable" value="searchable" severity="info" />
             </div>
           </div>
         </div>

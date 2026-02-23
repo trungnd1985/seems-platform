@@ -21,6 +21,7 @@ interface ListContentItemsParams {
   contentTypeKey?: string
   status?: ContentStatus | ''
   categoryId?: string
+  search?: string
 }
 
 export function useContentItems() {
@@ -41,6 +42,7 @@ export function useContentItems() {
       if (params.contentTypeKey) query.contentTypeKey = params.contentTypeKey
       if (params.status) query.status = params.status
       if (params.categoryId) query.categoryId = params.categoryId
+      if (params.search && params.search.length >= 3) query.search = params.search
 
       const { data } = await api.get<PaginatedList<ContentItem>>('/content-items', { params: query })
       items.value = data.items

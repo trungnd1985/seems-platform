@@ -16,6 +16,7 @@ export interface ContentField {
   type: FieldType
   required: boolean
   description?: string
+  searchable?: boolean     // text/textarea: include in admin search
   // type-specific options
   multiple?: boolean       // select: allow multiple values
   options?: string[]       // select: allowed values

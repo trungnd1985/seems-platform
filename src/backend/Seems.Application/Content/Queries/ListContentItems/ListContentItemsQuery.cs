@@ -9,5 +9,6 @@ public record ListContentItemsQuery(
     int PageSize = 20,
     string? ContentTypeKey = null,
     string? Status = null,
-    Guid? CategoryId = null
+    Guid? CategoryId = null,
+    string? Search = null
 ) : IRequest<PaginatedList<ContentItemDto>>;

@@ -11,7 +11,8 @@ public class ContentItemConfiguration : IEntityTypeConfiguration<ContentItem>
         builder.HasKey(e => e.Id);
         builder.HasIndex(e => e.ContentTypeKey);
         builder.Property(e => e.ContentTypeKey).HasMaxLength(128).IsRequired();
-        builder.Property(e => e.Data).HasColumnType("json");
+        builder.Property(e => e.Data).HasColumnType("jsonb");
+        builder.HasIndex(e => e.Data).HasMethod("gin").HasDatabaseName("ix_content_items_data_gin");
         builder.Property(e => e.Status).HasConversion<string>().HasMaxLength(32);
     }
 }

@@ -17,10 +17,14 @@ public class ListContentItemsHandler(IContentRepository contentRepository, IMapp
         if (!string.IsNullOrEmpty(request.Status) && Enum.TryParse<ContentStatus>(request.Status, true, out var parsed))
             status = parsed;
 
+        var search = request.Search?.Trim();
+        if (search?.Length < 3) search = null;
+
         var (items, total) = await contentRepository.ListAsync(
             request.ContentTypeKey,
             status,
             request.CategoryId,
+            search,
             request.Page,
             request.PageSize,
             cancellationToken);

@@ -6,6 +6,7 @@ import Button from 'primevue/button'
 import Tag from 'primevue/tag'
 import Dialog from 'primevue/dialog'
 import Select from 'primevue/select'
+import InputText from 'primevue/inputtext'
 import Toast from 'primevue/toast'
 import Paginator from 'primevue/paginator'
 import { useToast } from 'primevue/usetoast'
@@ -44,8 +45,18 @@ const { categories, fetchCategories } = useCategories()
 const filterContentTypeKey = ref<string>('')
 const filterStatus = ref<ContentStatus | ''>('')
 const filterCategoryId = ref<string>('')
+const filterSearch = ref<string>('')
 const page = ref(1)
 const pageSize = 20
+
+let searchDebounceTimer: ReturnType<typeof setTimeout> | null = null
+function onSearchInput() {
+  if (searchDebounceTimer) clearTimeout(searchDebounceTimer)
+  searchDebounceTimer = setTimeout(() => {
+    page.value = 1
+    loadItems()
+  }, 350)
+}
 
 // Dialog state
 const formVisible = ref(false)
@@ -98,6 +109,7 @@ async function loadItems() {
     contentTypeKey: filterContentTypeKey.value || undefined,
     status: filterStatus.value || undefined,
     categoryId: filterCategoryId.value || undefined,
+    search: filterSearch.value || undefined,
   })
 }
 
@@ -247,7 +259,13 @@ function cancelDelete() {
         option-value="value"
         placeholder="All Statuses"
         style="width: 160px"
-      />      
+      />
+      <InputText
+        v-model="filterSearch"
+        placeholder="Search..."
+        style="width: 220px"
+        @input="onSearchInput"
+      />
     </div>
 
     <div v-if="error" class="error-banner">{{ error }}</div>

@@ -21,9 +21,10 @@ public class ContentItemsController(ISender sender) : ControllerBase
         [FromQuery] int pageSize = 20,
         [FromQuery] string? contentTypeKey = null,
         [FromQuery] string? status = null,
-        [FromQuery] Guid? categoryId = null)
+        [FromQuery] Guid? categoryId = null,
+        [FromQuery] string? search = null)
     {
-        var result = await sender.Send(new ListContentItemsQuery(page, pageSize, contentTypeKey, status, categoryId));
+        var result = await sender.Send(new ListContentItemsQuery(page, pageSize, contentTypeKey, status, categoryId, search));
         return Ok(result);
     }
 
