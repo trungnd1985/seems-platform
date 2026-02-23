@@ -4,4 +4,11 @@ using Seems.Application.Content.Dtos;
 
 namespace Seems.Application.Content.Queries.ListContentItems;
 
-public record ListContentItemsQuery(int Page = 1, int PageSize = 20) : IRequest<PaginatedList<ContentItemDto>>;
+public record ListContentItemsQuery(
+    int Page = 1,
+    int PageSize = 20,
+    string? ContentTypeKey = null,
+    string? Status = null,
+    Guid? CategoryId = null,
+    string? Search = null
+) : IRequest<PaginatedList<ContentItemDto>>;

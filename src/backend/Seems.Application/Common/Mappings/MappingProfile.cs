@@ -1,5 +1,6 @@
 using System.Text.Json;
 using AutoMapper;
+using Seems.Application.Categories.Dtos;
 using Seems.Application.Content.Dtos;
 using Seems.Application.Identity.Dtos;
 using Seems.Application.Media.Dtos;
@@ -19,10 +20,15 @@ public class MappingProfile : Profile
         CreateMap<Page, PageDto>();
         CreateMap<SlotMapping, SlotMappingDto>();
         CreateMap<ContentType, ContentTypeDto>();
+        CreateMap<Category, CategoryDto>()
+            .ForMember(d => d.Children, opt => opt.Ignore())
+            .ForMember(d => d.ItemCount, opt => opt.Ignore());
         CreateMap<ContentItem, ContentItemDto>()
             .ForMember(d => d.Data, opt => opt.MapFrom(s =>
                 JsonSerializer.Deserialize<JsonElement>(
-                    string.IsNullOrWhiteSpace(s.Data) ? "{}" : s.Data)));
+                    string.IsNullOrWhiteSpace(s.Data) ? "{}" : s.Data)))
+            .ForMember(d => d.CategoryIds, opt => opt.MapFrom(s =>
+                s.ContentItemCategories.Select(c => c.CategoryId).ToList()));
         CreateMap<Template, TemplateDto>()
             .ForMember(d => d.Slots, opt => opt.MapFrom(s =>
                 JsonSerializer.Deserialize<List<TemplateSlotDef>>(

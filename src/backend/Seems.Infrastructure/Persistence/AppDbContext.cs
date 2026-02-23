@@ -19,6 +19,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
     public DbSet<MediaFolder> MediaFolders => Set<MediaFolder>();
     public DbSet<SiteSetting> SiteSettings => Set<SiteSetting>();
     public DbSet<Module> Modules => Set<Module>();
+    public DbSet<Category> Categories => Set<Category>();
+    public DbSet<ContentItemCategory> ContentItemCategories => Set<ContentItemCategory>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

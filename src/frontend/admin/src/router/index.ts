@@ -35,6 +35,11 @@ const router = createRouter({
           component: () => import('@/views/content/ContentItemListView.vue'),
         },
         {
+          path: 'content-categories',
+          name: 'content-categories',
+          component: () => import('@/views/content/CategoryListView.vue'),
+        },
+        {
           path: 'templates',
           name: 'templates',
           component: () => import('@/views/templates/TemplateListView.vue'),

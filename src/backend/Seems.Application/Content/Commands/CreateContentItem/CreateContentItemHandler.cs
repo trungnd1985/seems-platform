@@ -6,7 +6,11 @@ using Seems.Domain.Interfaces;
 
 namespace Seems.Application.Content.Commands.CreateContentItem;
 
-public class CreateContentItemHandler(IContentRepository contentRepository, IUnitOfWork unitOfWork, IMapper mapper)
+public class CreateContentItemHandler(
+    IContentRepository contentRepository,
+    ICategoryRepository categoryRepository,
+    IUnitOfWork unitOfWork,
+    IMapper mapper)
     : IRequestHandler<CreateContentItemCommand, ContentItemDto>
 {
     public async Task<ContentItemDto> Handle(CreateContentItemCommand request, CancellationToken cancellationToken)
@@ -23,6 +27,13 @@ public class CreateContentItemHandler(IContentRepository contentRepository, IUni
         await contentRepository.AddAsync(item, cancellationToken);
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
-        return mapper.Map<ContentItemDto>(item);
+        if (request.CategoryIds is not null)
+        {
+            await categoryRepository.SyncContentItemCategoriesAsync(item.Id, request.CategoryIds, cancellationToken);
+            await unitOfWork.SaveChangesAsync(cancellationToken);
+        }
+
+        var saved = await contentRepository.GetByIdAsync(item.Id, cancellationToken) ?? item;
+        return mapper.Map<ContentItemDto>(saved);
     }
 }

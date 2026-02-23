@@ -8,6 +8,7 @@ public class ContentItemDto
     public string ContentTypeKey { get; set; } = string.Empty;
     public JsonElement Data { get; set; }
     public string Status { get; set; } = string.Empty;
+    public IReadOnlyList<Guid> CategoryIds { get; set; } = [];
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
 }

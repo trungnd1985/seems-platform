@@ -24,9 +24,12 @@ const name = ref('')
 const label = ref('')
 const type = ref<FieldType>('text')
 const required = ref(false)
+const searchable = ref(false)
 const description = ref('')
 const multiple = ref(false)
 const optionsRaw = ref('')
+
+const showSearchable = computed(() => ['text', 'textarea'].includes(type.value))
 
 const isEdit = computed(() => props.field !== null)
 
@@ -50,6 +53,7 @@ watch(
     label.value = f?.label ?? ''
     type.value = f?.type ?? 'text'
     required.value = f?.required ?? false
+    searchable.value = f?.searchable ?? false
     description.value = f?.description ?? ''
     multiple.value = f?.multiple ?? false
     optionsRaw.value = f?.options?.join(', ') ?? ''
@@ -81,6 +85,7 @@ function submit() {
     required: required.value,
   }
 
+  if (showSearchable.value && searchable.value) field.searchable = true
   if (description.value.trim()) field.description = description.value.trim()
 
   if (type.value === 'select') {
@@ -158,6 +163,11 @@ function submit() {
         <label for="field-required">Required field</label>
       </div>
 
+      <div v-if="showSearchable" class="field-check">
+        <Checkbox v-model="searchable" binary input-id="field-searchable" />
+        <label for="field-searchable">Searchable <span class="hint-inline">(admin search)</span></label>
+      </div>
+
       <template v-if="type === 'select'">
         <div class="field-check">
           <Checkbox v-model="multiple" binary input-id="field-multiple" />
@@ -222,6 +232,12 @@ function submit() {
 .hint {
   color: var(--p-text-muted-color);
   font-size: 0.75rem;
+}
+
+.hint-inline {
+  color: var(--p-text-muted-color);
+  font-size: 0.8rem;
+  font-weight: 400;
 }
 
 .error-hint {
