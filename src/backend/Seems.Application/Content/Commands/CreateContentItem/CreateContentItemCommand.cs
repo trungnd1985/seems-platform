@@ -5,5 +5,6 @@ namespace Seems.Application.Content.Commands.CreateContentItem;
 
 public record CreateContentItemCommand(
     string ContentTypeKey,
-    string Data
+    string Data,
+    IEnumerable<Guid>? CategoryIds = null
 ) : IRequest<ContentItemDto>;

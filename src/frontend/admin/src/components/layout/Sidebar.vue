@@ -28,6 +28,7 @@ const navGroups: NavGroup[] = [
       { label: 'Pages', icon: 'pi pi-file', routeName: 'pages' },
       { label: 'Content Types', icon: 'pi pi-th-large', routeName: 'content-types' },
       { label: 'Content Items', icon: 'pi pi-list', routeName: 'content-items' },
+      { label: 'Categories', icon: 'pi pi-tag', routeName: 'content-categories' },
       { label: 'Media', icon: 'pi pi-images', routeName: 'media' },
     ],
   },

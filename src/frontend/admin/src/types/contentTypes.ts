@@ -75,6 +75,38 @@ export const FIELD_TYPE_LABELS: Record<FieldType, string> = {
   relation: 'Relation',
 }
 
+export type ContentStatus = 'Draft' | 'Published' | 'Archived'
+
+export const CONTENT_STATUSES: ContentStatus[] = ['Draft', 'Published', 'Archived']
+
+export const CONTENT_STATUS_SEVERITY: Record<ContentStatus, string> = {
+  Draft: 'secondary',
+  Published: 'success',
+  Archived: 'warn',
+}
+
+export interface ContentItem {
+  id: string
+  contentTypeKey: string
+  data: Record<string, unknown>
+  status: ContentStatus
+  categoryIds: string[]
+  createdAt: string
+  updatedAt: string
+}
+
+export interface CreateContentItemRequest {
+  contentTypeKey: string
+  data: string // JSON string
+  categoryIds?: string[]
+}
+
+export interface UpdateContentItemRequest {
+  data: string // JSON string
+  status?: ContentStatus
+  categoryIds?: string[]
+}
+
 export const FIELD_TYPE_ICONS: Record<FieldType, string> = {
   text: 'pi pi-align-left',
   textarea: 'pi pi-align-justify',

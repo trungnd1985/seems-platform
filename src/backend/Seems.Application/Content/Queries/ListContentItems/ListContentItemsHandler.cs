@@ -2,6 +2,7 @@ using AutoMapper;
 using MediatR;
 using Seems.Application.Common.Models;
 using Seems.Application.Content.Dtos;
+using Seems.Domain.Enums;
 using Seems.Domain.Interfaces;
 
 namespace Seems.Application.Content.Queries.ListContentItems;
@@ -12,13 +13,19 @@ public class ListContentItemsHandler(IContentRepository contentRepository, IMapp
     public async Task<PaginatedList<ContentItemDto>> Handle(ListContentItemsQuery request,
         CancellationToken cancellationToken)
     {
-        var items = await contentRepository.GetAllAsync(cancellationToken);
-        var dtos = mapper.Map<IReadOnlyList<ContentItemDto>>(items);
-        var paged = dtos
-            .Skip((request.Page - 1) * request.PageSize)
-            .Take(request.PageSize)
-            .ToList();
+        ContentStatus? status = null;
+        if (!string.IsNullOrEmpty(request.Status) && Enum.TryParse<ContentStatus>(request.Status, true, out var parsed))
+            status = parsed;
 
-        return new PaginatedList<ContentItemDto>(paged, dtos.Count, request.Page, request.PageSize);
+        var (items, total) = await contentRepository.ListAsync(
+            request.ContentTypeKey,
+            status,
+            request.CategoryId,
+            request.Page,
+            request.PageSize,
+            cancellationToken);
+
+        var dtos = mapper.Map<IReadOnlyList<ContentItemDto>>(items);
+        return new PaginatedList<ContentItemDto>([.. dtos], total, request.Page, request.PageSize);
     }
 }

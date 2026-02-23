@@ -125,6 +125,57 @@ namespace Seems.Infrastructure.Persistence.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
+            modelBuilder.Entity("Seems.Domain.Entities.Category", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ContentTypeKey")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(1024)
+                        .HasColumnType("character varying(1024)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<Guid?>("ParentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Slug")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<int>("SortOrder")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0);
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ContentTypeKey");
+
+                    b.HasIndex("ParentId");
+
+                    b.HasIndex("ContentTypeKey", "ParentId", "Slug")
+                        .IsUnique();
+
+                    b.ToTable("Categories");
+                });
+
             modelBuilder.Entity("Seems.Domain.Entities.ContentItem", b =>
                 {
                     b.Property<Guid>("Id")
@@ -156,6 +207,21 @@ namespace Seems.Infrastructure.Persistence.Migrations
                     b.HasIndex("ContentTypeKey");
 
                     b.ToTable("ContentItems");
+                });
+
+            modelBuilder.Entity("Seems.Domain.Entities.ContentItemCategory", b =>
+                {
+                    b.Property<Guid>("ContentItemId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CategoryId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("ContentItemId", "CategoryId");
+
+                    b.HasIndex("CategoryId");
+
+                    b.ToTable("ContentItemCategories");
                 });
 
             modelBuilder.Entity("Seems.Domain.Entities.ContentType", b =>
@@ -681,6 +747,35 @@ namespace Seems.Infrastructure.Persistence.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("Seems.Domain.Entities.Category", b =>
+                {
+                    b.HasOne("Seems.Domain.Entities.Category", "Parent")
+                        .WithMany("Children")
+                        .HasForeignKey("ParentId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Parent");
+                });
+
+            modelBuilder.Entity("Seems.Domain.Entities.ContentItemCategory", b =>
+                {
+                    b.HasOne("Seems.Domain.Entities.Category", "Category")
+                        .WithMany("ContentItemCategories")
+                        .HasForeignKey("CategoryId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Seems.Domain.Entities.ContentItem", "ContentItem")
+                        .WithMany("ContentItemCategories")
+                        .HasForeignKey("ContentItemId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Category");
+
+                    b.Navigation("ContentItem");
+                });
+
             modelBuilder.Entity("Seems.Domain.Entities.Media", b =>
                 {
                     b.HasOne("Seems.Domain.Entities.MediaFolder", "Folder")
@@ -747,6 +842,18 @@ namespace Seems.Infrastructure.Persistence.Migrations
                         .IsRequired();
 
                     b.Navigation("Page");
+                });
+
+            modelBuilder.Entity("Seems.Domain.Entities.Category", b =>
+                {
+                    b.Navigation("Children");
+
+                    b.Navigation("ContentItemCategories");
+                });
+
+            modelBuilder.Entity("Seems.Domain.Entities.ContentItem", b =>
+                {
+                    b.Navigation("ContentItemCategories");
                 });
 
             modelBuilder.Entity("Seems.Domain.Entities.MediaFolder", b =>

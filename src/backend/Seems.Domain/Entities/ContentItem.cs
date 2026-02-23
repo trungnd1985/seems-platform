@@ -8,4 +8,5 @@ public class ContentItem : BaseEntity
     public string ContentTypeKey { get; set; } = string.Empty;
     public string Data { get; set; } = "{}";
     public ContentStatus Status { get; set; } = ContentStatus.Draft;
+    public ICollection<ContentItemCategory> ContentItemCategories { get; set; } = [];
 }

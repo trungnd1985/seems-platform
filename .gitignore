@@ -53,3 +53,4 @@ packages/
 
 # Vite
 *.local
+wwwroot/
