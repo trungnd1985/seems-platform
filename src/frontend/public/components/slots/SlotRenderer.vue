@@ -7,8 +7,8 @@ const props = defineProps<{
   mapping: SlotMapping
 }>()
 
-const isContent = computed(() => props.mapping.targetType === 'content')
-const isModule = computed(() => props.mapping.targetType === 'module')
+const isContent = computed(() => props.mapping.targetType === 'Content')
+const isModule = computed(() => props.mapping.targetType === 'Module')
 
 const { data: contentItem } = isContent.value
   ? await useContentItem(props.mapping.targetId)

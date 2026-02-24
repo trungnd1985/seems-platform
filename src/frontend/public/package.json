@@ -4,9 +4,10 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "cross-env NODE_OPTIONS=--max-old-space-size=4096 nuxt dev",
-    "build": "cross-env NODE_OPTIONS=--max-old-space-size=4096 nuxt build",
-    "generate": "cross-env NODE_OPTIONS=--max-old-space-size=4096 nuxt generate",
+    "dev": "cross-env NODE_OPTIONS=--max-old-space-size=2048 nuxt dev",
+    "debug": "cross-env NODE_OPTIONS=--max-old-space-size=2048 nuxt dev",
+    "build": "cross-env NODE_OPTIONS=--max-old-space-size=3072 nuxt build",
+    "generate": "cross-env NODE_OPTIONS=--max-old-space-size=3072 nuxt generate",
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare"
   },

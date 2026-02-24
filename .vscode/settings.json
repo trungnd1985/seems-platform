@@ -1,0 +1,11 @@
+{
+  "vetur.config.path": "./vetur.config.js",
+  "vetur.useWorkspaceDependencies": true,
+  "vetur.validation.template": true,
+  "vetur.validation.script": true,
+  "vetur.validation.style": true,
+
+  // Tell Vetur where to look for vue files
+  "vetur.ignoreProjectWarning": false,
+  "vetur.enable": false
+}

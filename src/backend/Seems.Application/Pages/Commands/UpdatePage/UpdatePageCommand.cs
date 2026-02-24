@@ -10,5 +10,6 @@ public record UpdatePageCommand(
     string Title,
     string TemplateKey,
     string? ThemeKey,
-    SeoMeta? Seo
+    SeoMeta? Seo,
+    bool IsDefault = false
 ) : IRequest<PageDto>;

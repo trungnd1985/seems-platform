@@ -19,7 +19,7 @@ function statusSeverity(status: string): string {
 }
 
 const toast = useToast()
-const { pages, loading, error, fetchPages, createPage, updatePage, deletePage, setDefaultPage } =
+const { pages, loading, error, fetchPages, getPage, createPage, updatePage, deletePage, setDefaultPage } =
   usePages()
 
 const settingDefaultId = ref<string | null>(null)
@@ -60,8 +60,12 @@ function openCreate() {
   formDialogVisible.value = true
 }
 
-function openEdit(page: Page) {
-  selectedPage.value = page
+async function openEdit(page: Page) {
+  try {
+    selectedPage.value = await getPage(page.id)
+  } catch {
+    selectedPage.value = page
+  }
   formDialogVisible.value = true
 }
 
@@ -71,6 +75,7 @@ async function onSaved(payload: {
   templateKey: string
   themeKey: string | null
   seo: SeoMeta
+  isDefault: boolean
 }) {
   try {
     if (selectedPage.value) {

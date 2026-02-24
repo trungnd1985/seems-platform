@@ -1,6 +1,7 @@
-import { defineSitemapEventHandler } from '#imports'
-
-export default defineSitemapEventHandler(async () => {
+// Dynamic URL source for @nuxtjs/sitemap (active in production only).
+// Uses defineEventHandler directly so this file compiles cleanly in dev
+// even when @nuxtjs/sitemap is not loaded.
+export default defineEventHandler(async () => {
   const config = useRuntimeConfig()
   const apiBase = config.apiBase as string
 

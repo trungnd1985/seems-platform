@@ -28,4 +28,5 @@ const templateComponent = computed(() => {
     :page="page"
     :slots="page.slots"
   />
+  <DebugOverlay :page="page" :error="error" source="default" />
 </template>
