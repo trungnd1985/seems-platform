@@ -24,7 +24,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   'update:visible': [value: boolean]
-  saved: [payload: { slug: string; title: string; templateKey: string; themeKey: string | null; seo: SeoMeta }]
+  saved: [payload: { slug: string; title: string; templateKey: string; themeKey: string | null; seo: SeoMeta; isDefault: boolean }]
 }>()
 
 const activeTab = ref('page')
@@ -106,10 +106,10 @@ function generateSlug(title: string): string {
   return title
     .toLowerCase()
     .trim()
-    .replace(/[^a-z0-9\s/_-]/g, '')
-    .replace(/\s+/g, '-')
-    .replace(/-+/g, '-')
-    .replace(/^-+|-+$/g, '')
+    .replace(/[^a-z0-9\s_-]/g, '')   // strip chars not valid in a segment
+    .replace(/\s+/g, '-')             // spaces → hyphens
+    .replace(/-+/g, '-')              // collapse consecutive hyphens
+    .replace(/^[-_]+|[-_]+$/g, '')    // strip leading/trailing hyphens or underscores
 }
 
 watch(
@@ -125,18 +125,15 @@ function onSlugInput() {
   slugManuallyEdited.value = true
 }
 
-const slugInvalid = computed(
-  () => form.slug.length > 0 && !/^[a-z0-9][a-z0-9/_-]*$/.test(form.slug),
-)
+// Each segment: starts with alphanumeric, body [a-z0-9_-]; segments joined by a single /
+const SLUG_RE = /^[a-z0-9][a-z0-9_-]*(?:\/[a-z0-9][a-z0-9_-]*)*$/
+const slugInvalid = computed(() => form.slug.length > 0 && !SLUG_RE.test(form.slug))
 
 function canSubmit(): boolean {
-  return !!(
-    form.slug.trim() &&
-    form.title.trim() &&
-    form.themeKey &&
-    form.templateKey &&
-    !slugInvalid.value
-  )
+  const isDefault = props.page?.isDefault ?? false
+  // Default pages are resolved by the isDefault flag, not by slug — skip slug validation
+  const slugOk = isDefault || (!!form.slug.trim() && !slugInvalid.value)
+  return !!(form.title.trim() && form.themeKey && form.templateKey && slugOk)
 }
 
 function close() {
@@ -149,6 +146,7 @@ function submit() {
     title: form.title.trim(),
     templateKey: form.templateKey,
     themeKey: form.themeKey,
+    isDefault: props.page?.isDefault ?? false,
     seo: {
       title: form.seo.title.trim() || form.title.trim(),
       description: form.seo.description || null,
@@ -209,8 +207,9 @@ function submit() {
                 The home page is resolved by the Default flag, not by slug.
               </small>
               <small v-else-if="slugInvalid" class="hint error">
-                Slug must be lowercase and contain only letters, digits, hyphens, underscores, or
-                forward slashes.
+                Use lowercase letters, digits, hyphens, or underscores per segment — segments
+                separated by a single forward slash (e.g. <code>about-us</code> or
+                <code>blog/my-post</code>). No leading/trailing slashes or consecutive slashes.
               </small>
               <small v-else class="hint">Auto-generated from title; you can override it.</small>
             </div>

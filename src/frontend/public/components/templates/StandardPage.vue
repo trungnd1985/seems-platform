@@ -30,6 +30,11 @@ function getSlotMappings(slotKey: string): SlotMapping[] {
           :key="mapping.targetId"
           :mapping="mapping"
         />
+        <SlotRenderer
+          v-for="mapping in getSlotMappings('body')"
+          :key="mapping.targetId"
+          :mapping="mapping"
+        />
       </div>
 
       <aside v-if="getSlotMappings('sidebar').length" class="slot-sidebar">

@@ -1,17 +1,20 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
 import Button from 'primevue/button'
 import Select from 'primevue/select'
 import InputText from 'primevue/inputtext'
+import AutoComplete from 'primevue/autocomplete'
 import Tag from 'primevue/tag'
 import Toast from 'primevue/toast'
 import { useToast } from 'primevue/usetoast'
 import { usePages } from '@/composables/usePages'
+import { useContentItems } from '@/composables/useContentItems'
 import type { Page, SlotMapping, SlotTargetType } from '@/types/pages'
 import { SLOT_TARGET_TYPES } from '@/types/pages'
 import type { TemplateSlotDef } from '@/types/templates'
+import type { ContentItem } from '@/types/contentTypes'
 
 const props = defineProps<{
   page: Page
@@ -25,6 +28,7 @@ const emit = defineEmits<{
 
 const toast = useToast()
 const { addSlot, removeSlot, reorderSlots } = usePages()
+const { items: contentItemResults, loading: contentItemLoading, fetchContentItems } = useContentItems()
 
 // Local sorted copy — mutated directly; never triggers parent re-render unless we emit
 const slots = ref<SlotMapping[]>([...props.initialSlots].sort((a, b) => a.order - b.order))
@@ -35,6 +39,32 @@ const newTargetType = ref<SlotTargetType>('Content')
 const newTargetId = ref('')
 const adding = ref(false)
 
+// Content item picker state (used when targetType === 'Content')
+const selectedContentItem = ref<ContentItem | null>(null)
+
+// Clear selection when target type changes
+watch(newTargetType, () => {
+  newTargetId.value = ''
+  selectedContentItem.value = null
+})
+
+// Sync selected content item ID → newTargetId
+watch(selectedContentItem, (item) => {
+  newTargetId.value = (item && typeof item === 'object') ? item.id : ''
+})
+
+async function onContentItemSearch(event: { query: string }) {
+  await fetchContentItems({ search: event.query || undefined, pageSize: 20 })
+}
+
+function contentItemLabel(item: ContentItem): string {
+  const data = item.data as Record<string, unknown>
+  const title = (data?.title ?? data?.name ?? null) as string | null
+  return title
+    ? `${title} · ${item.contentTypeKey}`
+    : `${item.contentTypeKey} · ${item.id.slice(0, 8)}…`
+}
+
 const slotKeyOptions = computed(() => {
   if (props.templateSlots.length > 0) {
     return props.templateSlots.map((s) => ({ label: `${s.label} (${s.key})`, value: s.key }))
@@ -42,7 +72,13 @@ const slotKeyOptions = computed(() => {
   return []
 })
 
-const canAdd = computed(() => !!newSlotKey.value && !!newTargetId.value.trim())
+const canAdd = computed(() => {
+  if (!newSlotKey.value) return false
+  if (newTargetType.value === 'Content') {
+    return !!selectedContentItem.value && typeof selectedContentItem.value === 'object'
+  }
+  return !!newTargetId.value.trim()
+})
 
 async function doAdd() {
   if (!canAdd.value) return
@@ -56,6 +92,7 @@ async function doAdd() {
     })
     slots.value = [...slots.value, mapping].sort((a, b) => a.order - b.order)
     newTargetId.value = ''
+    selectedContentItem.value = null
     emit('updated', slots.value)
     toast.add({ severity: 'success', summary: 'Slot added', life: 2000 })
   } catch (e: any) {
@@ -255,9 +292,35 @@ function isLast(slot: SlotMapping): boolean {
           style="width: 140px"
         />
 
+        <!-- Content item: searchable picker -->
+        <AutoComplete
+          v-if="newTargetType === 'Content'"
+          v-model="selectedContentItem"
+          :suggestions="contentItemResults"
+          :loading="contentItemLoading"
+          :option-label="contentItemLabel"
+          force-selection
+          placeholder="Search content items…"
+          style="flex: 1; min-width: 220px"
+          @complete="onContentItemSearch"
+        >
+          <template #option="{ option }">
+            <div class="ci-option">
+              <span class="ci-label">{{ contentItemLabel(option) }}</span>
+              <Tag
+                :value="option.status"
+                :severity="option.status === 'Published' ? 'success' : 'secondary'"
+                class="ci-status"
+              />
+            </div>
+          </template>
+        </AutoComplete>
+
+        <!-- Module: free-text key -->
         <InputText
+          v-else
           v-model="newTargetId"
-          placeholder="Target ID (UUID)"
+          placeholder="Module key"
           maxlength="256"
           style="flex: 1; min-width: 180px"
           @keydown.enter.prevent="doAdd"
@@ -331,6 +394,26 @@ function isLast(slot: SlotMapping): boolean {
   align-items: center;
   flex-wrap: wrap;
   gap: 0.5rem;
+}
+
+.ci-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+.ci-label {
+  font-size: 0.875rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ci-status {
+  flex-shrink: 0;
+  font-size: 0.7rem;
 }
 
 .hint {

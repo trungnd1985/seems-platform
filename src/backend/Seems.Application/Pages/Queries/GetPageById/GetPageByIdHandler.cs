@@ -10,7 +10,7 @@ public class GetPageByIdHandler(IPageRepository pageRepository, IMapper mapper)
 {
     public async Task<PageDto> Handle(GetPageByIdQuery request, CancellationToken cancellationToken)
     {
-        var page = await pageRepository.GetByIdAsync(request.Id, cancellationToken)
+        var page = await pageRepository.GetWithSlotsAsync(request.Id, cancellationToken)
             ?? throw new KeyNotFoundException($"Page '{request.Id}' not found.");
 
         return mapper.Map<PageDto>(page);

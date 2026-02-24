@@ -10,7 +10,7 @@ export interface SeoMeta {
 
 export interface SlotMapping {
   slotKey: string
-  targetType: 'content' | 'module'
+  targetType: 'Content' | 'Module'
   targetId: string
   order: number
 }

@@ -1,5 +1,6 @@
 using System.Reflection;
 using FluentValidation;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Seems.Application.Common.Behaviors;
 
@@ -7,12 +8,13 @@ namespace Seems.Application;
 
 public static class DependencyInjection
 {
-    public static IServiceCollection AddApplication(this IServiceCollection services)
+    public static IServiceCollection AddApplication(this IServiceCollection services, IConfiguration configuration)
     {
         var assembly = Assembly.GetExecutingAssembly();
 
         services.AddMediatR(cfg =>
         {
+            cfg.LicenseKey = configuration["MediatR:LicenseKey"];
             cfg.RegisterServicesFromAssembly(assembly);
             cfg.AddBehavior(typeof(MediatR.IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
             cfg.AddBehavior(typeof(MediatR.IPipelineBehavior<,>), typeof(LoggingBehavior<,>));

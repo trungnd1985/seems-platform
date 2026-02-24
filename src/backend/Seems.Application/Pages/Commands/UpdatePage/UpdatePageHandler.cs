@@ -14,15 +14,18 @@ public class UpdatePageHandler(IPageRepository pageRepository, IUnitOfWork unitO
         var page = await pageRepository.GetByIdAsync(request.Id, cancellationToken)
             ?? throw new KeyNotFoundException($"Page '{request.Id}' not found.");
 
-        // Check slug uniqueness only when it changed
-        if (page.Slug != request.Slug)
+        // Default pages are resolved by the IsDefault flag — preserve their existing slug
+        if (!request.IsDefault)
         {
-            var existing = await pageRepository.GetBySlugAsync(request.Slug, cancellationToken);
-            if (existing is not null)
-                throw new InvalidOperationException($"Slug '{request.Slug}' is already in use.");
-        }
+            if (page.Slug != request.Slug)
+            {
+                var existing = await pageRepository.GetBySlugAsync(request.Slug, cancellationToken);
+                if (existing is not null)
+                    throw new InvalidOperationException($"Slug '{request.Slug}' is already in use.");
+            }
 
-        page.Slug = request.Slug;
+            page.Slug = request.Slug;
+        }
         page.Title = request.Title;
         page.TemplateKey = request.TemplateKey;
         page.ThemeKey = request.ThemeKey;
