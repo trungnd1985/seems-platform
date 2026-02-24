@@ -76,6 +76,12 @@ const router = createRouter({
           name: 'settings',
           component: () => import('@/views/settings/SiteSettingsView.vue'),
         },
+        {
+          path: 'audit-log',
+          name: 'audit-log',
+          component: () => import('@/views/audit/AuditLogView.vue'),
+          meta: { roles: ['Admin'] },
+        },
       ],
     },
   ],

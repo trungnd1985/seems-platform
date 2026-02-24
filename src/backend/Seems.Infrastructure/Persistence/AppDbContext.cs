@@ -21,6 +21,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
     public DbSet<Module> Modules => Set<Module>();
     public DbSet<Category> Categories => Set<Category>();
     public DbSet<ContentItemCategory> ContentItemCategories => Set<ContentItemCategory>();
+    public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

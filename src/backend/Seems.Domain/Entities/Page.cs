@@ -4,7 +4,7 @@ using Seems.Domain.ValueObjects;
 
 namespace Seems.Domain.Entities;
 
-public class Page : BaseEntity
+public class Page : BaseEntity, IAuditable
 {
     public string Slug { get; set; } = string.Empty;
     public string Title { get; set; } = string.Empty;

@@ -8,6 +8,7 @@ using Seems.Domain.Entities.Identity;
 using Seems.Domain.Interfaces;
 using Seems.Infrastructure.Identity;
 using Seems.Infrastructure.Persistence;
+using Seems.Infrastructure.Persistence.Interceptors;
 using Seems.Infrastructure.Persistence.Repositories;
 using Seems.Infrastructure.Storage;
 
@@ -19,8 +20,13 @@ public static class DependencyInjection
     {
         var connectionString = configuration.GetConnectionString("DefaultConnection")!;
 
-        services.AddDbContext<AppDbContext>(options =>
-            options.UseNpgsql(connectionString));
+        services.AddScoped<AuditSaveChangesInterceptor>();
+
+        services.AddDbContext<AppDbContext>((sp, options) =>
+        {
+            options.UseNpgsql(connectionString);
+            options.AddInterceptors(sp.GetRequiredService<AuditSaveChangesInterceptor>());
+        });
 
         services.AddIdentity<AppUser, AppRole>(options =>
             {
