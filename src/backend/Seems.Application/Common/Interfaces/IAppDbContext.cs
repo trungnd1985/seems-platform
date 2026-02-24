@@ -10,6 +10,7 @@ public interface IAppDbContext
     DbSet<MediaFolder> MediaFolders { get; }
     DbSet<SiteSetting> SiteSettings { get; }
     DbSet<AppUser> Users { get; }
+    DbSet<AuditLog> AuditLogs { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

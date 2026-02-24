@@ -45,6 +45,7 @@ const navGroups: NavGroup[] = [
       { label: 'Modules', icon: 'pi pi-box', routeName: 'modules' },
       { label: 'Users', icon: 'pi pi-users', routeName: 'users', adminOnly: true },
       { label: 'Roles', icon: 'pi pi-shield', routeName: 'roles', adminOnly: true },
+      { label: 'Audit Log', icon: 'pi pi-history', routeName: 'audit-log', adminOnly: true },
       { label: 'Settings', icon: 'pi pi-cog', routeName: 'settings' },
     ],
   },

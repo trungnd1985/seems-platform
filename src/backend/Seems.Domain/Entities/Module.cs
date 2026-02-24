@@ -3,7 +3,7 @@ using Seems.Domain.Enums;
 
 namespace Seems.Domain.Entities;
 
-public class Module : BaseEntity
+public class Module : BaseEntity, IAuditable
 {
     public string ModuleKey { get; set; } = string.Empty;
     public string Name { get; set; } = string.Empty;

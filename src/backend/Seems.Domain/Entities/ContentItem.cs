@@ -3,7 +3,7 @@ using Seems.Domain.Enums;
 
 namespace Seems.Domain.Entities;
 
-public class ContentItem : BaseEntity
+public class ContentItem : BaseEntity, IAuditable
 {
     public string ContentTypeKey { get; set; } = string.Empty;
     public string Data { get; set; } = "{}";

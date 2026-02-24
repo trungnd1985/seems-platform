@@ -2,7 +2,7 @@ using Seems.Domain.Common;
 
 namespace Seems.Domain.Entities;
 
-public class Theme : BaseEntity
+public class Theme : BaseEntity, IAuditable
 {
     public string Key { get; set; } = string.Empty;
     public string Name { get; set; } = string.Empty;
