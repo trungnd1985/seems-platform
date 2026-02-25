@@ -13,6 +13,7 @@ using Seems.Application.Pages.Dtos;
 using Seems.Application.Pages.Queries.GetDefaultPage;
 using Seems.Application.Pages.Queries.GetPageById;
 using Seems.Application.Pages.Queries.GetPageBySlug;
+using Seems.Application.Pages.Queries.GetPageTree;
 using Seems.Application.Pages.Queries.ListPages;
 using Seems.Domain.Enums;
 
@@ -52,11 +53,19 @@ public class PagesController(ISender sender) : ControllerBase
         return result is null ? NotFound() : Ok(result);
     }
 
+    [HttpGet("tree")]
+    [Authorize]
+    public async Task<IActionResult> GetTree()
+    {
+        var result = await sender.Send(new GetPageTreeQuery());
+        return Ok(result);
+    }
+
     [HttpGet("sitemap")]
     public async Task<IActionResult> Sitemap()
     {
-        var result = await sender.Send(new ListPagesQuery(1, 10000));
-        var sitemap = result.Items.Select(p => new { p.Slug, p.UpdatedAt });
+        var result = await sender.Send(new GetPageTreeQuery());
+        var sitemap = result.Select(p => new { p.Path, p.UpdatedAt });
         return Ok(sitemap);
     }
 

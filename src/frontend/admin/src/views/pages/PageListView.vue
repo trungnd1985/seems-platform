@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import DataTable from 'primevue/datatable'
+import TreeTable from 'primevue/treetable'
 import Column from 'primevue/column'
 import Button from 'primevue/button'
 import Tag from 'primevue/tag'
@@ -19,17 +19,41 @@ function statusSeverity(status: string): string {
 }
 
 const toast = useToast()
-const { pages, loading, error, fetchPages, getPage, createPage, updatePage, deletePage, setDefaultPage } =
+const { pages, treeNodes, loading, error, fetchPageTree, getPage, createPage, updatePage, deletePage, updatePageStatus, setDefaultPage } =
   usePages()
 
 const settingDefaultId = ref<string | null>(null)
+const togglingStatusId = ref<string | null>(null)
+
+async function doTogglePublish(page: Page) {
+  const next = page.status === 'Published' ? 'Draft' : 'Published'
+  togglingStatusId.value = page.id
+  try {
+    await updatePageStatus(page.id, next)
+    toast.add({
+      severity: next === 'Published' ? 'success' : 'info',
+      summary: next === 'Published' ? `"${page.title}" published` : `"${page.title}" unpublished`,
+      life: 3000,
+    })
+    await fetchPageTree()
+  } catch (e: any) {
+    toast.add({
+      severity: 'error',
+      summary: 'Error',
+      detail: e.response?.data?.message ?? 'Failed to update status.',
+      life: 5000,
+    })
+  } finally {
+    togglingStatusId.value = null
+  }
+}
 
 async function doSetDefault(page: Page) {
   settingDefaultId.value = page.id
   try {
     await setDefaultPage(page.id)
     toast.add({ severity: 'success', summary: `"${page.title}" is now the home page`, life: 3000 })
-    await fetchPages()
+    await fetchPageTree()
   } catch (e: any) {
     toast.add({
       severity: 'error',
@@ -41,22 +65,25 @@ async function doSetDefault(page: Page) {
     settingDefaultId.value = null
   }
 }
+
 const { templates, fetchTemplates } = useTemplates()
 const { themes, fetchThemes } = useThemes()
 
 const formDialogVisible = ref(false)
 const selectedPage = ref<Page | null>(null)
+const createParentId = ref<string | null>(null)
 
 const deleteDialogVisible = ref(false)
 const pageToDelete = ref<Page | null>(null)
 const deleting = ref(false)
 
 onMounted(async () => {
-  await Promise.all([fetchPages(), fetchTemplates(), fetchThemes()])
+  await Promise.all([fetchPageTree(), fetchTemplates(), fetchThemes()])
 })
 
-function openCreate() {
+function openCreate(parentId: string | null = null) {
   selectedPage.value = null
+  createParentId.value = parentId
   formDialogVisible.value = true
 }
 
@@ -66,6 +93,7 @@ async function openEdit(page: Page) {
   } catch {
     selectedPage.value = page
   }
+  createParentId.value = null
   formDialogVisible.value = true
 }
 
@@ -76,17 +104,25 @@ async function onSaved(payload: {
   themeKey: string | null
   seo: SeoMeta
   isDefault: boolean
+  parentId: string | null
+  sortOrder: number
+  status: PageStatus
+  showInNavigation: boolean
 }) {
   try {
     if (selectedPage.value) {
-      await updatePage(selectedPage.value.id, { id: selectedPage.value.id, ...payload })
+      const { status, ...pagePayload } = payload
+      await updatePage(selectedPage.value.id, { id: selectedPage.value.id, ...pagePayload })
+      if (status !== selectedPage.value.status) {
+        await updatePageStatus(selectedPage.value.id, status)
+      }
       toast.add({ severity: 'success', summary: 'Page updated', life: 3000 })
     } else {
       await createPage(payload)
       toast.add({ severity: 'success', summary: 'Page created', life: 3000 })
     }
     formDialogVisible.value = false
-    await fetchPages()
+    await fetchPageTree()
   } catch (e: any) {
     toast.add({
       severity: 'error',
@@ -110,7 +146,7 @@ async function doDelete() {
     deleteDialogVisible.value = false
     pageToDelete.value = null
     toast.add({ severity: 'success', summary: 'Page deleted', life: 3000 })
-    await fetchPages()
+    await fetchPageTree()
   } catch (e: any) {
     toast.add({
       severity: 'error',
@@ -138,59 +174,88 @@ function cancelDelete() {
         <h1 class="page-title">Pages</h1>
         <p class="page-subtitle">Manage site pages, their templates, and slot compositions.</p>
       </div>
-      <Button label="New Page" icon="pi pi-plus" @click="openCreate" />
+      <Button label="New Page" icon="pi pi-plus" @click="openCreate()" />
     </div>
 
     <div v-if="error" class="error-banner">{{ error }}</div>
 
-    <DataTable :value="pages" :loading="loading" striped-rows class="pages-table">
-      <Column field="slug" header="Slug" style="width: 220px">
-        <template #body="{ data }">
-          <code v-if="data.slug" class="key-badge">{{ data.slug }}</code>
-          <span v-else class="text-muted">— (home)</span>
-        </template>
-      </Column>
-
-      <Column field="title" header="Title">
-        <template #body="{ data }">
+    <TreeTable :value="treeNodes" :loading="loading" class="pages-table">
+      <Column field="title" header="Title" expander style="min-width: 220px">
+        <template #body="{ node }">
           <div class="title-cell">
-            <span class="page-name">{{ data.title }}</span>
-            <Tag v-if="data.isDefault" value="Home" severity="info" class="home-tag" />
+            <span class="page-name">{{ node.data.title }}</span>
+            <Tag v-if="node.data.isDefault" value="Home" severity="info" class="home-tag" />
           </div>
         </template>
       </Column>
 
-      <Column field="templateKey" header="Template" style="width: 180px">
-        <template #body="{ data }">
-          <code class="key-badge">{{ data.templateKey }}</code>
+      <Column header="Path" style="width: 240px">
+        <template #body="{ node }">
+          <code v-if="node.data.path" class="key-badge">{{ node.data.path }}</code>
+          <span v-else class="text-muted">-- (home)</span>
         </template>
       </Column>
 
-      <Column field="status" header="Status" style="width: 120px">
-        <template #body="{ data }">
-          <Tag :value="data.status" :severity="statusSeverity(data.status)" />
+      <Column header="Template" style="width: 180px">
+        <template #body="{ node }">
+          <code class="key-badge">{{ node.data.templateKey }}</code>
         </template>
       </Column>
 
-      <Column field="updatedAt" header="Updated" style="width: 160px">
-        <template #body="{ data }">
-          <span class="date-cell">{{ new Date(data.updatedAt).toLocaleDateString() }}</span>
+      <Column header="Status" style="width: 120px">
+        <template #body="{ node }">
+          <Tag :value="node.data.status" :severity="statusSeverity(node.data.status)" />
         </template>
       </Column>
 
-      <Column header="Actions" style="width: 150px">
-        <template #body="{ data }">
+      <Column header="Nav" style="width: 72px">
+        <template #body="{ node }">
+          <i
+            :class="node.data.showInNavigation ? 'pi pi-eye' : 'pi pi-eye-slash'"
+            :style="{ color: node.data.showInNavigation ? 'var(--p-green-500)' : 'var(--p-surface-400)' }"
+            v-tooltip.top="node.data.showInNavigation ? 'Visible in navigation' : 'Hidden from navigation'"
+          />
+        </template>
+      </Column>
+
+      <Column header="Updated" style="width: 120px">
+        <template #body="{ node }">
+          <span class="date-cell">{{ new Date(node.data.updatedAt).toLocaleDateString() }}</span>
+        </template>
+      </Column>
+
+      <Column header="Actions" style="width: 210px">
+        <template #body="{ node }">
           <div class="actions">
             <Button
-              v-if="!data.isDefault"
+              :icon="node.data.status === 'Published' ? 'pi pi-eye-slash' : 'pi pi-send'"
+              text
+              rounded
+              :severity="node.data.status === 'Published' ? 'warn' : 'success'"
+              :aria-label="node.data.status === 'Published' ? 'Unpublish' : 'Publish'"
+              v-tooltip.top="node.data.status === 'Published' ? 'Unpublish' : 'Publish'"
+              :loading="togglingStatusId === node.data.id"
+              @click="doTogglePublish(node.data)"
+            />
+            <Button
+              v-if="!node.data.isDefault"
               icon="pi pi-home"
               text
               rounded
               severity="secondary"
               aria-label="Set as home page"
               v-tooltip.top="'Set as home page'"
-              :loading="settingDefaultId === data.id"
-              @click="doSetDefault(data)"
+              :loading="settingDefaultId === node.data.id"
+              @click="doSetDefault(node.data)"
+            />
+            <Button
+              icon="pi pi-plus"
+              text
+              rounded
+              severity="secondary"
+              aria-label="Add child page"
+              v-tooltip.top="'Add child page'"
+              @click="openCreate(node.data.id)"
             />
             <Button
               icon="pi pi-pencil"
@@ -198,7 +263,7 @@ function cancelDelete() {
               rounded
               severity="secondary"
               aria-label="Edit"
-              @click="openEdit(data)"
+              @click="openEdit(node.data)"
             />
             <Button
               icon="pi pi-trash"
@@ -206,14 +271,14 @@ function cancelDelete() {
               rounded
               severity="danger"
               aria-label="Delete"
-              :disabled="data.isDefault"
-              v-tooltip.top="data.isDefault ? 'Cannot delete the home page' : 'Delete'"
-              @click="confirmDelete(data)"
+              :disabled="node.data.isDefault"
+              v-tooltip.top="node.data.isDefault ? 'Cannot delete the home page' : 'Delete'"
+              @click="confirmDelete(node.data)"
             />
           </div>
         </template>
       </Column>
-    </DataTable>
+    </TreeTable>
 
     <PageFormDialog
       :visible="formDialogVisible"
@@ -221,6 +286,8 @@ function cancelDelete() {
       :page="selectedPage"
       :templates="templates"
       :themes="themes"
+      :all-pages="pages"
+      :initial-parent-id="createParentId"
       @saved="onSaved"
     />
 
@@ -228,7 +295,7 @@ function cancelDelete() {
       :visible="deleteDialogVisible"
       @update:visible="deleteDialogVisible = $event"
       header="Delete Page"
-      :style="{ width: '420px' }"
+      :style="{ width: '440px' }"
       :closable="!deleting"
       modal
     >
@@ -236,8 +303,9 @@ function cancelDelete() {
         <i class="pi pi-exclamation-triangle delete-icon" />
         <p>
           Permanently delete <strong>{{ pageToDelete?.title }}</strong>
-          (<code class="key-badge">{{ pageToDelete?.slug }}</code>)?
-          This action cannot be undone.
+          (<code class="key-badge">{{ pageToDelete?.path }}</code>)?
+          <br />
+          <span class="hint-warn">Pages with children cannot be deleted -- re-parent or delete children first.</span>
         </p>
       </div>
 
@@ -252,7 +320,7 @@ function cancelDelete() {
 <style scoped>
 .pages-page {
   padding: 1.5rem;
-  max-width: 1100px;
+  max-width: 1200px;
 }
 
 .page-header {
@@ -334,4 +402,10 @@ function cancelDelete() {
   flex-shrink: 0;
   margin-top: 0.125rem;
 }
+
+.hint-warn {
+  color: var(--p-orange-500);
+  font-size: 0.8125rem;
+}
 </style>
+

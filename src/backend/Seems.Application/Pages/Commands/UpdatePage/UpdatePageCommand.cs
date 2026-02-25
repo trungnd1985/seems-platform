@@ -11,5 +11,8 @@ public record UpdatePageCommand(
     string TemplateKey,
     string? ThemeKey,
     SeoMeta? Seo,
-    bool IsDefault = false
+    bool IsDefault = false,
+    Guid? ParentId = null,
+    int SortOrder = 0,
+    bool ShowInNavigation = true
 ) : IRequest<PageDto>;

@@ -10,8 +10,8 @@ public class UpdatePageValidator : AbstractValidator<UpdatePageCommand>
         RuleFor(x => x.Slug)
             .NotEmpty()
             .MaximumLength(256)
-            .Matches(@"^[a-z0-9][a-z0-9_-]*(?:\/[a-z0-9][a-z0-9_-]*)*$")
-            .WithMessage("Slug must be lowercase alphanumeric segments separated by a single forward slash (e.g. about-us or blog/my-post). No leading/trailing slashes, consecutive slashes, or special characters.")
+            .Matches(@"^[a-z0-9][a-z0-9_-]*$")
+            .WithMessage("Slug must be a single lowercase alphanumeric segment (e.g. about-us, careers). No slashes — use the Parent field to build nested paths.")
             .When(x => !x.IsDefault);
         RuleFor(x => x.Title).NotEmpty().MaximumLength(512);
         RuleFor(x => x.TemplateKey).NotEmpty().MaximumLength(128);

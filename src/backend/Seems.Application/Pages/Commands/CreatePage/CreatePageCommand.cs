@@ -9,5 +9,8 @@ public record CreatePageCommand(
     string Title,
     string TemplateKey,
     string? ThemeKey,
-    SeoMeta? Seo
+    SeoMeta? Seo,
+    Guid? ParentId = null,
+    int SortOrder = 0,
+    bool ShowInNavigation = true
 ) : IRequest<PageDto>;

@@ -2,6 +2,7 @@ import { ref } from 'vue'
 import { useApi } from '@/composables/useApi'
 import type {
   Page,
+  PageTreeNode,
   PaginatedPages,
   CreatePageRequest,
   UpdatePageRequest,
@@ -11,9 +12,21 @@ import type {
   PageStatus,
 } from '@/types/pages'
 
+function buildTree(pages: Page[], parentId: string | null = null): PageTreeNode[] {
+  return pages
+    .filter((p) => p.parentId === parentId)
+    .sort((a, b) => a.sortOrder - b.sortOrder || a.title.localeCompare(b.title))
+    .map((p) => ({
+      key: p.id,
+      data: p,
+      children: buildTree(pages, p.id),
+    }))
+}
+
 export function usePages() {
   const api = useApi()
   const pages = ref<Page[]>([])
+  const treeNodes = ref<PageTreeNode[]>([])
   const total = ref(0)
   const loading = ref(false)
   const error = ref<string | null>(null)
@@ -25,6 +38,20 @@ export function usePages() {
       const { data } = await api.get<PaginatedPages>('/pages', { params: { page, pageSize } })
       pages.value = data.items
       total.value = data.total
+    } catch (e: any) {
+      error.value = e.response?.data?.message ?? 'Failed to load pages.'
+    } finally {
+      loading.value = false
+    }
+  }
+
+  async function fetchPageTree() {
+    loading.value = true
+    error.value = null
+    try {
+      const { data } = await api.get<Page[]>('/pages/tree')
+      pages.value = data
+      treeNodes.value = buildTree(data)
     } catch (e: any) {
       error.value = e.response?.data?.message ?? 'Failed to load pages.'
     } finally {
@@ -76,10 +103,12 @@ export function usePages() {
 
   return {
     pages,
+    treeNodes,
     total,
     loading,
     error,
     fetchPages,
+    fetchPageTree,
     getPage,
     createPage,
     updatePage,
