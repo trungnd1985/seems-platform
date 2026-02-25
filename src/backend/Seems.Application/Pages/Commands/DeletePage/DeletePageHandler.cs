@@ -11,6 +11,9 @@ public class DeletePageHandler(IPageRepository pageRepository, IUnitOfWork unitO
         var page = await pageRepository.GetByIdAsync(request.Id, cancellationToken)
             ?? throw new KeyNotFoundException($"Page '{request.Id}' not found.");
 
+        if (await pageRepository.HasChildrenAsync(request.Id, cancellationToken))
+            throw new InvalidOperationException("Cannot delete a page that has child pages. Re-parent or delete the children first.");
+
         pageRepository.Delete(page);
         await unitOfWork.SaveChangesAsync(cancellationToken);
     }

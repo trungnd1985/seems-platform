@@ -21,16 +21,28 @@ export interface SlotMapping {
 
 export interface Page {
   id: string
+  parentId: string | null
+  parentTitle: string | null
   slug: string
+  path: string
+  sortOrder: number
   title: string
   templateKey: string
   themeKey: string | null
   seo: SeoMeta
   status: PageStatus
   isDefault: boolean
+  showInNavigation: boolean
   slots: SlotMapping[]
   createdAt: string
   updatedAt: string
+}
+
+/** Node shape expected by PrimeVue TreeTable. */
+export interface PageTreeNode {
+  key: string
+  data: Page
+  children?: PageTreeNode[]
 }
 
 export interface PaginatedPages {
@@ -47,6 +59,9 @@ export interface CreatePageRequest {
   templateKey: string
   themeKey?: string | null
   seo?: SeoMeta | null
+  parentId?: string | null
+  sortOrder?: number
+  showInNavigation?: boolean
 }
 
 export interface UpdatePageRequest {
@@ -56,6 +71,9 @@ export interface UpdatePageRequest {
   templateKey: string
   themeKey?: string | null
   seo?: SeoMeta | null
+  parentId?: string | null
+  sortOrder?: number
+  showInNavigation?: boolean
 }
 
 export interface AddSlotRequest {

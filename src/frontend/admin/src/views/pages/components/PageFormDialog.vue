@@ -9,9 +9,11 @@ import TabPanel from 'primevue/tabpanel'
 import InputText from 'primevue/inputtext'
 import Textarea from 'primevue/textarea'
 import Select from 'primevue/select'
+import SelectButton from 'primevue/selectbutton'
+import ToggleSwitch from 'primevue/toggleswitch'
 import Button from 'primevue/button'
 import PageSlotEditor from './PageSlotEditor.vue'
-import type { Page, SeoMeta, SlotMapping } from '@/types/pages'
+import type { Page, PageStatus, SeoMeta, SlotMapping } from '@/types/pages'
 import type { Template } from '@/types/templates'
 import type { Theme } from '@/types/themes'
 
@@ -20,21 +22,44 @@ const props = defineProps<{
   page: Page | null
   templates: Template[]
   themes: Theme[]
+  allPages: Page[]
+  initialParentId: string | null
 }>()
 
 const emit = defineEmits<{
   'update:visible': [value: boolean]
-  saved: [payload: { slug: string; title: string; templateKey: string; themeKey: string | null; seo: SeoMeta; isDefault: boolean }]
+  saved: [payload: {
+    slug: string
+    title: string
+    templateKey: string
+    themeKey: string | null
+    seo: SeoMeta
+    isDefault: boolean
+    parentId: string | null
+    sortOrder: number
+    status: PageStatus
+    showInNavigation: boolean
+  }]
 }>()
 
 const activeTab = ref('page')
 const slugManuallyEdited = ref(false)
+
+const STATUS_OPTIONS: { label: string; value: PageStatus }[] = [
+  { label: 'Draft', value: 'Draft' },
+  { label: 'Published', value: 'Published' },
+  { label: 'Archived', value: 'Archived' },
+]
 
 const form = reactive({
   slug: '',
   title: '',
   templateKey: '',
   themeKey: null as string | null,
+  parentId: null as string | null,
+  sortOrder: 0,
+  status: 'Draft' as PageStatus,
+  showInNavigation: true,
   seo: {
     title: '',
     description: null as string | null,
@@ -46,7 +71,6 @@ const form = reactive({
   },
 })
 
-// Track local slots for the Slots tab (edit mode only)
 const localSlots = ref<SlotMapping[]>([])
 
 watch(
@@ -58,6 +82,10 @@ watch(
     form.title = p?.title ?? ''
     form.templateKey = p?.templateKey ?? ''
     form.themeKey = p?.themeKey ?? null
+    form.parentId = p?.parentId ?? props.initialParentId ?? null
+    form.sortOrder = p?.sortOrder ?? 0
+    form.status = p?.status ?? 'Draft'
+    form.showInNavigation = p?.showInNavigation ?? true
     form.seo.title = p?.seo?.title ?? ''
     form.seo.description = p?.seo?.description ?? null
     form.seo.ogTitle = p?.seo?.ogTitle ?? null
@@ -69,6 +97,15 @@ watch(
   },
   { immediate: true },
 )
+// When dialog opens for a new page via "Add child", pick up the initialParentId
+watch(
+  () => props.initialParentId,
+  (pid) => {
+    if (!props.page) {
+      form.parentId = pid
+    }
+  },
+)
 
 const isEdit = () => props.page !== null
 
@@ -76,8 +113,6 @@ const themeOptions = computed(() =>
   props.themes.map((t) => ({ label: `${t.name} (${t.key})`, value: t.key })),
 )
 
-// Filter templates to only those belonging to the selected theme.
-// When no theme is selected, show all templates.
 const templateOptions = computed(() => {
   const source = form.themeKey
     ? props.templates.filter((t) => t.themeKey === form.themeKey)
@@ -85,7 +120,6 @@ const templateOptions = computed(() => {
   return source.map((t) => ({ label: `${t.name} (${t.key})`, value: t.key }))
 })
 
-// When the theme changes, clear the template selection if it no longer belongs to the new theme.
 watch(
   () => form.themeKey,
   (newThemeKey) => {
@@ -102,14 +136,40 @@ const selectedTemplateSlots = computed(() => {
   return tpl?.slots ?? []
 })
 
+// Parent page options: exclude the page being edited and any page that is a descendant
+const parentOptions = computed(() => {
+  const editingId = props.page?.id
+  const disallowedIds = new Set<string>()
+  if (editingId) {
+    disallowedIds.add(editingId)
+    // Find descendants: pages whose path starts with the current page's path
+    const editingPath = props.page?.path ?? ''
+    props.allPages.forEach((p) => {
+      if (p.path.startsWith(editingPath + '/')) disallowedIds.add(p.id)
+    })
+  }
+  const opts = props.allPages
+    .filter((p) => !disallowedIds.has(p.id))
+    .map((p) => ({ label: `${p.title} (/${p.path})`, value: p.id }))
+  return [{ label: 'None (root page)', value: null }, ...opts]
+})
+
+// Computed preview of the full URL path
+const previewPath = computed(() => {
+  if (props.page?.isDefault) return ''
+  const parent = props.allPages.find((p) => p.id === form.parentId)
+  if (parent) return parent.path + '/' + (form.slug || '…')
+  return form.slug || '…'
+})
+
 function generateSlug(title: string): string {
   return title
     .toLowerCase()
     .trim()
-    .replace(/[^a-z0-9\s_-]/g, '')   // strip chars not valid in a segment
-    .replace(/\s+/g, '-')             // spaces → hyphens
-    .replace(/-+/g, '-')              // collapse consecutive hyphens
-    .replace(/^[-_]+|[-_]+$/g, '')    // strip leading/trailing hyphens or underscores
+    .replace(/[^a-z0-9\s_-]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^[-_]+|[-_]+$/g, '')
 }
 
 watch(
@@ -125,13 +185,12 @@ function onSlugInput() {
   slugManuallyEdited.value = true
 }
 
-// Each segment: starts with alphanumeric, body [a-z0-9_-]; segments joined by a single /
-const SLUG_RE = /^[a-z0-9][a-z0-9_-]*(?:\/[a-z0-9][a-z0-9_-]*)*$/
+// Segment-only regex — no slashes allowed
+const SLUG_RE = /^[a-z0-9][a-z0-9_-]*$/
 const slugInvalid = computed(() => form.slug.length > 0 && !SLUG_RE.test(form.slug))
 
 function canSubmit(): boolean {
   const isDefault = props.page?.isDefault ?? false
-  // Default pages are resolved by the isDefault flag, not by slug — skip slug validation
   const slugOk = isDefault || (!!form.slug.trim() && !slugInvalid.value)
   return !!(form.title.trim() && form.themeKey && form.templateKey && slugOk)
 }
@@ -147,6 +206,10 @@ function submit() {
     templateKey: form.templateKey,
     themeKey: form.themeKey,
     isDefault: props.page?.isDefault ?? false,
+    parentId: form.parentId,
+    sortOrder: form.sortOrder,
+    status: form.status,
+    showInNavigation: form.showInNavigation,
     seo: {
       title: form.seo.title.trim() || form.title.trim(),
       description: form.seo.description || null,
@@ -159,12 +222,11 @@ function submit() {
   })
 }
 </script>
-
 <template>
   <Dialog
     :visible="visible"
     :header="isEdit() ? 'Edit Page' : 'New Page'"
-    :style="{ width: '620px' }"
+    :style="{ width: '640px' }"
     modal
     @update:visible="close"
   >
@@ -191,8 +253,24 @@ function submit() {
               />
             </div>
 
+            <div class="field" v-if="!page?.isDefault">
+              <label for="pg-parent">Parent Page</label>
+              <Select
+                id="pg-parent"
+                :modelValue="form.parentId"
+                @update:modelValue="form.parentId = $event"
+                :options="parentOptions"
+                option-label="label"
+                option-value="value"
+                placeholder="None (root page)"
+                fluid
+              />
+            </div>
+
             <div class="field">
-              <label for="pg-slug">Slug <span v-if="!page?.isDefault" class="required">*</span></label>
+              <label for="pg-slug">
+                Slug (segment)<span v-if="!page?.isDefault" class="required"> *</span>
+              </label>
               <InputText
                 id="pg-slug"
                 v-model="form.slug"
@@ -207,11 +285,45 @@ function submit() {
                 The home page is resolved by the Default flag, not by slug.
               </small>
               <small v-else-if="slugInvalid" class="hint error">
-                Use lowercase letters, digits, hyphens, or underscores per segment — segments
-                separated by a single forward slash (e.g. <code>about-us</code> or
-                <code>blog/my-post</code>). No leading/trailing slashes or consecutive slashes.
+                Slug must be a single lowercase segment (e.g. <code>about-us</code>, <code>careers</code>).
+                No slashes — use the Parent field to build nested paths.
               </small>
-              <small v-else class="hint">Auto-generated from title; you can override it.</small>
+              <small v-else class="hint">
+                URL path: <code>{{ previewPath }}</code>
+              </small>
+            </div>
+
+            <div v-if="isEdit()" class="field">
+              <label>Status</label>
+              <SelectButton
+                :modelValue="form.status"
+                @update:modelValue="form.status = $event"
+                :options="STATUS_OPTIONS"
+                option-label="label"
+                option-value="value"
+              />
+            </div>
+
+            <div class="field field--inline">
+              <ToggleSwitch
+                :modelValue="form.showInNavigation"
+                @update:modelValue="form.showInNavigation = $event"
+                inputId="pg-show-nav"
+              />
+              <label for="pg-show-nav">Show in navigation</label>
+            </div>
+
+            <div class="field">
+              <label for="pg-sort">Sort Order</label>
+              <InputText
+                id="pg-sort"
+                :modelValue="String(form.sortOrder)"
+                @update:modelValue="form.sortOrder = Number($event) || 0"
+                placeholder="0"
+                maxlength="10"
+                fluid
+              />
+              <small class="hint">Lower number appears first among siblings.</small>
             </div>
 
             <div class="field">
@@ -246,13 +358,11 @@ function submit() {
               />
               <small v-if="!form.themeKey" class="hint">Select a theme first.</small>
               <small v-else-if="templateOptions.length === 0" class="hint warn">
-                No templates for this theme. Create a template under
-                <strong>{{ form.themeKey }}</strong> first.
+                No templates for this theme.
               </small>
             </div>
           </form>
         </TabPanel>
-
         <!-- SEO TAB -->
         <TabPanel value="seo">
           <form class="dialog-form" @submit.prevent="submit">
@@ -338,7 +448,6 @@ function submit() {
             </div>
           </form>
         </TabPanel>
-
         <!-- SLOTS TAB (edit only) -->
         <TabPanel v-if="isEdit()" value="slots">
           <PageSlotEditor

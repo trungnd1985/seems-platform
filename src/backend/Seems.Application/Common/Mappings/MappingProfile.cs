@@ -17,7 +17,8 @@ public class MappingProfile : Profile
 {
     public MappingProfile()
     {
-        CreateMap<Page, PageDto>();
+        CreateMap<Page, PageDto>()
+            .ForMember(d => d.ParentTitle, opt => opt.MapFrom(s => s.Parent != null ? s.Parent.Title : null));
         CreateMap<SlotMapping, SlotMappingDto>();
         CreateMap<ContentType, ContentTypeDto>();
         CreateMap<Category, CategoryDto>()
