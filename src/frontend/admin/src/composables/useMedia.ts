@@ -1,5 +1,5 @@
 import { useApi } from './useApi'
-import type { MediaItem, MediaFolder, MediaPage, StorageSettings } from '@/types/media'
+import type { MediaItem, MediaFolder, MediaPage, StorageSettings, SiteInfo } from '@/types/media'
 
 export function useMedia() {
   const api = useApi()
@@ -75,6 +75,15 @@ export function useMedia() {
     await api.put('/settings/storage', dto)
   }
 
+  async function getSiteInfo(): Promise<SiteInfo> {
+    const res = await api.get<SiteInfo>('/settings/site')
+    return res.data
+  }
+
+  async function updateSiteInfo(dto: SiteInfo): Promise<void> {
+    await api.put('/settings/site', dto)
+  }
+
   return {
     listMedia,
     getMedia,
@@ -87,5 +96,7 @@ export function useMedia() {
     deleteFolder,
     getStorageSettings,
     updateStorageSettings,
+    getSiteInfo,
+    updateSiteInfo,
   }
 }
