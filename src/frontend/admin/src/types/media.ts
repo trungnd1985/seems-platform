@@ -48,3 +48,12 @@ export interface StorageSettings {
   local: LocalStorageConfig
   s3: S3StorageConfig
 }
+
+export interface SiteInfo {
+  siteName: string
+  tagline: string
+  logoMediaId: string | null
+  logoUrl: string | null
+  faviconMediaId: string | null
+  faviconUrl: string | null
+}
