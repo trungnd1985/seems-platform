@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
 import Button from 'primevue/button'
@@ -11,10 +11,12 @@ import Toast from 'primevue/toast'
 import { useToast } from 'primevue/usetoast'
 import { usePages } from '@/composables/usePages'
 import { useContentItems } from '@/composables/useContentItems'
+import { useModules } from '@/composables/useModules'
 import type { Page, SlotMapping, SlotTargetType } from '@/types/pages'
 import { SLOT_TARGET_TYPES } from '@/types/pages'
 import type { TemplateSlotDef } from '@/types/templates'
 import type { ContentItem } from '@/types/contentTypes'
+import type { Module } from '@/types/modules'
 
 const props = defineProps<{
   page: Page
@@ -29,6 +31,9 @@ const emit = defineEmits<{
 const toast = useToast()
 const { addSlot, removeSlot, reorderSlots } = usePages()
 const { items: contentItemResults, loading: contentItemLoading, fetchContentItems } = useContentItems()
+const { modules, fetchModules } = useModules()
+
+onMounted(() => { void fetchModules() })
 
 // Local sorted copy — mutated directly; never triggers parent re-render unless we emit
 const slots = ref<SlotMapping[]>([...props.initialSlots].sort((a, b) => a.order - b.order))
@@ -42,15 +47,26 @@ const adding = ref(false)
 // Content item picker state (used when targetType === 'Content')
 const selectedContentItem = ref<ContentItem | null>(null)
 
+// Module picker state (used when targetType === 'Module')
+const selectedModule = ref<Module | null>(null)
+const moduleResults = ref<Module[]>([])
+
 // Clear selection when target type changes
 watch(newTargetType, () => {
   newTargetId.value = ''
   selectedContentItem.value = null
+  selectedModule.value = null
+  moduleResults.value = []
 })
 
 // Sync selected content item ID → newTargetId
 watch(selectedContentItem, (item) => {
   newTargetId.value = (item && typeof item === 'object') ? item.id : ''
+})
+
+// Sync selected module key → newTargetId
+watch(selectedModule, (m) => {
+  newTargetId.value = (m && typeof m === 'object') ? m.moduleKey : ''
 })
 
 async function onContentItemSearch(event: { query: string }) {
@@ -63,6 +79,19 @@ function contentItemLabel(item: ContentItem): string {
   return title
     ? `${title} · ${item.contentTypeKey}`
     : `${item.contentTypeKey} · ${item.id.slice(0, 8)}…`
+}
+
+function onModuleSearch(event: { query: string }) {
+  const q = event.query.toLowerCase()
+  moduleResults.value = modules.value.filter(
+    (m) =>
+      m.status === 'Installed' &&
+      (m.name.toLowerCase().includes(q) || m.moduleKey.toLowerCase().includes(q)),
+  )
+}
+
+function moduleLabel(m: Module): string {
+  return `${m.name} (${m.moduleKey})`
 }
 
 const slotKeyOptions = computed(() => {
@@ -93,6 +122,7 @@ async function doAdd() {
     slots.value = [...slots.value, mapping].sort((a, b) => a.order - b.order)
     newTargetId.value = ''
     selectedContentItem.value = null
+    selectedModule.value = null
     emit('updated', slots.value)
     toast.add({ severity: 'success', summary: 'Slot added', life: 2000 })
   } catch (e: any) {
@@ -211,9 +241,17 @@ function isLast(slot: SlotMapping): boolean {
         </template>
       </Column>
 
-      <Column field="targetId" header="Target ID">
+      <Column field="targetId" header="Target">
         <template #body="{ data }">
-          <code class="target-id">{{ data.targetId }}</code>
+          <template v-if="data.targetType === 'Module'">
+            <span class="target-module">
+              <span class="target-module__name">
+                {{ modules.find((m) => m.moduleKey === data.targetId)?.name ?? data.targetId }}
+              </span>
+              <code class="target-id">{{ data.targetId }}</code>
+            </span>
+          </template>
+          <code v-else class="target-id">{{ data.targetId }}</code>
         </template>
       </Column>
 
@@ -316,15 +354,33 @@ function isLast(slot: SlotMapping): boolean {
           </template>
         </AutoComplete>
 
-        <!-- Module: free-text key -->
-        <InputText
+        <!-- Module: searchable picker (Installed modules only) -->
+        <AutoComplete
           v-else
-          v-model="newTargetId"
-          placeholder="Module key"
-          maxlength="256"
-          style="flex: 1; min-width: 180px"
-          @keydown.enter.prevent="doAdd"
-        />
+          v-model="selectedModule"
+          :suggestions="moduleResults"
+          :option-label="moduleLabel"
+          force-selection
+          placeholder="Search modules…"
+          style="flex: 1; min-width: 220px"
+          @complete="onModuleSearch"
+        >
+          <template #option="{ option }">
+            <div class="module-option">
+              <div class="module-option__main">
+                <span class="module-option__name">{{ option.name }}</span>
+                <code class="module-option__key">{{ option.moduleKey }}</code>
+              </div>
+              <Tag
+                v-if="option.description"
+                :value="option.version"
+                severity="secondary"
+                class="module-option__ver"
+              />
+            </div>
+          </template>
+          <template #empty>No installed modules match your search.</template>
+        </AutoComplete>
 
         <Button
           icon="pi pi-plus"
@@ -364,6 +420,17 @@ function isLast(slot: SlotMapping): boolean {
   font-size: 0.75rem;
   color: var(--p-text-muted-color);
   word-break: break-all;
+}
+
+.target-module {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.target-module__name {
+  font-size: 0.875rem;
+  font-weight: 500;
 }
 
 .order-buttons {
@@ -423,5 +490,43 @@ function isLast(slot: SlotMapping): boolean {
 
 .hint.warn {
   color: var(--p-orange-500);
+}
+
+.module-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+.module-option__main {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.module-option__name {
+  font-size: 0.875rem;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.module-option__key {
+  font-family: monospace;
+  font-size: 0.75rem;
+  color: var(--p-text-muted-color);
+  background: var(--p-surface-100);
+  border-radius: 3px;
+  padding: 0.05rem 0.3rem;
+  flex-shrink: 0;
+}
+
+.module-option__ver {
+  flex-shrink: 0;
+  font-size: 0.7rem;
 }
 </style>

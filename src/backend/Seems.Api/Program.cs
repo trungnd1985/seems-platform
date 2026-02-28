@@ -2,7 +2,9 @@ using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Seems.Api.Extensions;
 using Seems.Api.Filters;
+using Seems.Api.Middleware;
 using Seems.Application;
 using Seems.Infrastructure;
 using Seems.Infrastructure.Persistence;
@@ -14,7 +16,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddApplication(builder.Configuration);
 builder.Services.AddInfrastructure(builder.Configuration);
 
-// Controllers
+// Controllers + auto-discovery of Seems.Modules.*.dll
 builder.Services.AddControllers(options =>
 {
     options.Filters.Add<ApiExceptionFilter>();
@@ -24,7 +26,8 @@ builder.Services.AddControllers(options =>
     options.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
     options.JsonSerializerOptions.PropertyNameCaseInsensitive = true;
     options.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter(System.Text.Json.JsonNamingPolicy.CamelCase));
-});
+})
+.LoadSeemModules(builder.Configuration);
 
 // JWT Authentication
 builder.Services.AddAuthentication(options =>
@@ -93,6 +96,7 @@ app.UseStaticFiles(new StaticFileOptions
 });
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseMiddleware<ModuleStatusMiddleware>();
 app.MapControllers();
 
 app.Run();

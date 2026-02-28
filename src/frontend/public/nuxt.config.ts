@@ -34,6 +34,11 @@ export default defineNuxtConfig({
         target: 'http://localhost:5000/api',
         changeOrigin: true,
       },
+      // Proxy module static bundles served from the API's wwwroot
+      '/modules': {
+        target: 'http://localhost:5000/modules',
+        changeOrigin: true,
+      },
     },
     watchOptions: {
       ignored: ['**/node_modules/**', '**/.git/**', '**/.nuxt/**'],

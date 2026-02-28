@@ -8,6 +8,8 @@ public class ModuleDto
     public string Version { get; set; } = string.Empty;
     public string Status { get; set; } = string.Empty;
     public string? PublicComponentUrl { get; set; }
+    public string? Description { get; set; }
+    public string? Author { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
 }
