@@ -8,8 +8,8 @@ A module can:
 
 - Register backend API endpoints under `/api/modules/{moduleKey}/`
 - Declare custom ContentTypes (JSON schemas)
-- Provide a Vue 3 component for the **public site** (Nuxt 3 SSR)
-- Provide a Vue 3 component for the **admin panel** (Vue 3 SPA)
+- Provide a Vue 3 component for the **public site** (Nuxt 3, dynamically loaded ESM)
+- Provide a Vue 3 settings page for the **admin panel** (Vue 3 SPA)
 - Render inside any page template slot
 
 A module **cannot**:
@@ -17,335 +17,422 @@ A module **cannot**:
 - Modify core database tables or EF Core migrations
 - Access other modules' internals
 - Override core API routes
-- Import from `Seems.Domain` or `Seems.Infrastructure` directly
+- Import from `Seems.Domain` or `Seems.Infrastructure` directly (only `Seems.Application` is allowed)
 
 ---
 
-## Module Package Structure
+## Two Module Categories
+
+### 1. Data Modules (no C# code)
+
+Pure content modules that only declare ContentTypes. Registered entirely via the Admin UI by pasting `manifest.json`. No C# project needed.
+
+### 2. Logic Modules (custom backend, e.g. Slider)
+
+Require a dedicated class library. The platform auto-discovers and registers them at startup.
 
 ```
-seems-module-{moduleKey}/
-├── manifest.json                     # Module metadata and declarations
+src/modules/{key}/
+├── manifest.json
 ├── backend/
-│   ├── {ModuleName}Module.cs         # DI registration extension method
-│   ├── Controllers/
-│   │   └── {ModuleName}Controller.cs # Routes: /api/modules/{moduleKey}/*
-│   ├── Models/                        # DTOs specific to this module
-│   └── Services/
-│       ├── I{ModuleName}Service.cs
-│       └── {ModuleName}Service.cs
+│   └── Seems.Modules.{Key}/
+│       ├── Seems.Modules.{Key}.csproj    ← FrameworkReference: Microsoft.AspNetCore.App
+│       │                                    ProjectReference: Seems.Application
+│       ├── {Key}Module.cs                ← implements ISeemModule
+│       ├── {Key}Controller.cs
+│       └── {Key}Dtos.cs
 └── frontend/
-    ├── public/
-    │   ├── {ModuleName}.vue           # SSR-safe public component
-    │   ├── index.ts                   # Vite library entry point
-    │   └── vite.config.ts             # Builds to a single ESM bundle
-    └── admin/
-        └── {ModuleName}Settings.vue   # Admin configuration UI
+    └── public/
+        ├── {Key}.vue                     ← SSR-safe component (no Nuxt auto-imports)
+        ├── vue-bridge.js                 ← Re-exports all Vue APIs from window.__SEEMS_VUE__
+        ├── index.ts                      ← ESM entry (export { default } from './{Key}.vue')
+        └── vite.config.ts                ← Library build (outputs to API wwwroot)
 ```
+
+**Solution setup:**
+- Add `<ProjectReference>` to `Seems.Modules.{Key}.csproj` in `Seems.Api.csproj`
+- Add the module project to `SeemsPlatform.slnx`
 
 ---
 
 ## Step 1 — Create `manifest.json`
 
-Every module must have a `manifest.json` at its root. This is the module's contract with the platform.
+Every module must have a `manifest.json` at its root.
+
+> **IMPORTANT:** `contentTypes[].schema` must use the platform **ContentSchema** format, not standard JSON Schema.
 
 ```json
 {
-  "moduleKey": "contact-form",
-  "name": "Contact Form",
+  "moduleKey": "slider",
+  "name": "Hero Slider",
   "version": "1.0.0",
-  "description": "Adds a contact form with email notifications",
-  "author": "SEEMS Modules",
+  "description": "Full-width hero banner with autoplay",
+  "author": "SEEMS Platform",
+  "publicComponentUrl": "/modules/slider/component.js",
   "slots": [
     {
-      "key": "contact-form",
-      "label": "Contact Form",
+      "key": "slider",
+      "label": "Hero Slider",
       "allowedTypes": null,
       "maxItems": 1
     }
   ],
   "contentTypes": [
     {
-      "key": "contact-form-config",
-      "name": "Contact Form Config",
+      "key": "slider-slide",
+      "name": "Slider Slide",
       "schema": {
-        "type": "object",
-        "properties": {
-          "recipientEmail": { "type": "string", "format": "email" },
-          "subject": { "type": "string" },
-          "successMessage": { "type": "string" },
-          "fields": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "name": { "type": "string" },
-                "label": { "type": "string" },
-                "type": { "type": "string", "enum": ["text", "email", "textarea"] },
-                "required": { "type": "boolean" }
-              },
-              "required": ["name", "label", "type"]
-            }
-          }
-        },
-        "required": ["recipientEmail", "fields"]
+        "fields": [
+          { "name": "title",    "label": "Title",       "type": "text",   "required": true  },
+          { "name": "subtitle", "label": "Subtitle",    "type": "text",   "required": false },
+          { "name": "imageUrl", "label": "Image URL",   "type": "media",  "required": true  },
+          { "name": "ctaText",  "label": "CTA Text",    "type": "text",   "required": false },
+          { "name": "ctaLink",  "label": "CTA Link",    "type": "text",   "required": false },
+          { "name": "order",    "label": "Order",       "type": "number", "required": false }
+        ]
       }
     }
   ],
   "apis": [
-    { "method": "POST", "path": "/api/modules/contact-form/submit" },
-    { "method": "GET",  "path": "/api/modules/contact-form/config" },
-    { "method": "PUT",  "path": "/api/modules/contact-form/config" }
+    { "method": "GET",    "path": "/api/modules/slider/slides" },
+    { "method": "GET",    "path": "/api/modules/slider/slides/all" },
+    { "method": "POST",   "path": "/api/modules/slider/slides" },
+    { "method": "PUT",    "path": "/api/modules/slider/slides/{id}" },
+    { "method": "DELETE", "path": "/api/modules/slider/slides/{id}" }
   ]
 }
 ```
+
+### ContentSchema format (CRITICAL)
+
+`schema` must be a `ContentSchema` object — **not** standard JSON Schema:
+
+```json
+{ "fields": [{ "name": "title", "label": "Title", "type": "text", "required": true }] }
+```
+
+Valid `type` values: `text | textarea | richtext | number | boolean | datetime | date | select | media | relation`
+
+Do **not** use `{ "type": "object", "properties": {...} }` — the admin UI will render empty fields.
 
 ### Manifest Fields
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `moduleKey` | `string` | Yes | Unique kebab-case identifier. Used in URLs, DB, and component registry |
+| `moduleKey` | `string` | Yes | Unique kebab-case identifier. Immutable after registration. Used in URLs, DB, and component registry |
 | `name` | `string` | Yes | Display name shown in Admin UI |
 | `version` | `string` | Yes | SemVer string |
 | `description` | `string` | No | Short description for Admin UI |
 | `author` | `string` | No | Author name |
+| `publicComponentUrl` | `string` | No | Relative path (`/modules/slider/component.js`) or HTTPS URL to the pre-built ESM bundle. Required for slot rendering |
 | `slots` | `SlotDescriptor[]` | No | Slots this module can render into |
-| `contentTypes` | `ContentTypeDecl[]` | No | Content types registered on install |
-| `apis` | `ApiRoute[]` | No | API routes exposed (documentation, not enforced) |
+| `contentTypes` | `ContentTypeDecl[]` | No | Content types registered on install (ContentSchema format) |
+| `apis` | `ApiRoute[]` | No | API routes exposed (documentation only, not enforced) |
 
 ---
 
-## Step 2 — Backend: Controller
+## Step 2 — Backend: Module Entry Point + Controller
 
-Module APIs are namespaced under `/api/modules/{moduleKey}/`.
+### ISeemModule (auto-discovery entry point)
 
 ```csharp
-// backend/Controllers/ContactFormController.cs
-using Microsoft.AspNetCore.Mvc;
+// Seems.Modules.Slider/SliderModule.cs
+using Seems.Application.Modules;
 
-namespace Seems.Modules.ContactForm.Controllers;
+namespace Seems.Modules.Slider;
 
+public class SliderModule : ISeemModule
+{
+    public string ModuleKey => "slider";
+    // Override ConfigureServices() only if you need extra DI beyond
+    // what LoadSeemModules() registers automatically (controllers,
+    // MediatR handlers, validators, AutoMapper profiles).
+}
+```
+
+`LoadSeemModules()` (chained on `AddControllers()` in `Program.cs`) scans the output directory for `Seems.Modules.*.dll` and automatically:
+- Calls `AddApplicationPart` (registers controllers)
+- Calls `AddMediatR` (registers handlers — existing pipeline behaviors apply)
+- Calls `AddValidatorsFromAssembly` (FluentValidation)
+- Calls `AddAutoMapper` (profiles)
+
+**No manual wiring in `Program.cs` is required.**
+
+### Controller
+
+```csharp
+// Seems.Modules.Slider/SliderController.cs
 [ApiController]
-[Route("api/modules/contact-form")]
-public class ContactFormController(IContactFormService service) : ControllerBase
+[Route("api/modules/slider")]
+public class SliderController(ISender sender) : ControllerBase
 {
-    [HttpPost("submit")]
+    [HttpGet("slides")]
     [AllowAnonymous]
-    public async Task<IActionResult> Submit([FromBody] ContactFormSubmission body)
+    public async Task<IActionResult> GetPublished(CancellationToken ct)
     {
-        await service.SubmitAsync(body);
-        return Ok(new { message = "Submitted successfully" });
+        var items = await sender.Send(
+            new ListContentItemsQuery("slider-slide", Status: "Published", PageSize: 100), ct);
+        return Ok(items.Select(MapToSlideDto));
     }
 
-    [HttpGet("config")]
-    [AllowAnonymous]
-    public async Task<IActionResult> GetConfig()
-        => Ok(await service.GetConfigAsync());
-
-    [HttpPut("config")]
+    [HttpGet("slides/all")]
     [Authorize(Roles = "Admin")]
-    public async Task<IActionResult> UpdateConfig([FromBody] ContactFormConfig config)
+    public async Task<IActionResult> GetAll(CancellationToken ct)
     {
-        await service.SaveConfigAsync(config);
-        return Ok();
+        var items = await sender.Send(
+            new ListContentItemsQuery("slider-slide", PageSize: 100), ct);
+        return Ok(items.Select(MapToSlideDto));
     }
-}
-```
 
-### DI Registration
-
-```csharp
-// backend/ContactFormModule.cs
-using Microsoft.Extensions.DependencyInjection;
-
-namespace Seems.Modules.ContactForm;
-
-public static class ContactFormModule
-{
-    public static IServiceCollection AddContactFormModule(this IServiceCollection services)
+    [HttpPost("slides")]
+    [Authorize(Roles = "Admin")]
+    public async Task<ActionResult<SlideDto>> Create([FromBody] CreateSlideRequest body, CancellationToken ct)
     {
-        services.AddScoped<IContactFormService, ContactFormService>();
-        return services;
+        var item = await sender.Send(
+            new CreateContentItemCommand("slider-slide", JsonSerializer.Serialize(body)), ct);
+        return CreatedAtAction(nameof(GetPublished), MapToSlideDto(item));
     }
+
+    [HttpPut("slides/{id:guid}")]
+    [Authorize(Roles = "Admin")]
+    public async Task<ActionResult<SlideDto>> Update(Guid id, [FromBody] UpdateSlideRequest body, CancellationToken ct)
+    {
+        var item = await sender.Send(
+            new UpdateContentItemCommand(id, JsonSerializer.Serialize(body), body.Status), ct);
+        return Ok(MapToSlideDto(item));
+    }
+
+    [HttpDelete("slides/{id:guid}")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> Delete(Guid id, CancellationToken ct)
+    {
+        await sender.Send(new DeleteContentItemCommand(id), ct);
+        return NoContent();
+    }
+
+    private static SlideDto MapToSlideDto(ContentItemDto dto) { /* deserialize dto.Data */ }
 }
-```
-
-Call this from the host `Program.cs`:
-
-```csharp
-builder.Services.AddContactFormModule();
 ```
 
 ### Backend Rules
 
-- Route prefix **must** be `/api/modules/{moduleKey}/`
-- Only reference `Seems.Shared.Contracts` — never `Seems.Domain` or `Seems.Infrastructure`
-- Use `[Authorize]` / `[AllowAnonymous]` as appropriate per endpoint
-- Never modify core tables. Use module-owned storage or `ContentItem` JSON data
-
-### Backend Contract Interface
-
-Implement `IModuleManifest` from `Seems.Shared` if you need the manifest to be discoverable at runtime:
-
-```csharp
-using Seems.Shared.Contracts;
-
-namespace Seems.Modules.ContactForm;
-
-public class ContactFormManifest : IModuleManifest
-{
-    public string ModuleKey => "contact-form";
-    public string Name => "Contact Form";
-    public string Version => "1.0.0";
-    public IReadOnlyList<SlotDescriptor> Slots =>
-    [
-        new("contact-form", "Contact Form", MaxItems: 1)
-    ];
-}
-```
+- Route prefix **must** be `api/modules/{moduleKey}` (no trailing slash in attribute)
+- Only reference `Seems.Application` — never `Seems.Infrastructure` directly
+- Module API routes are gated by `ModuleStatusMiddleware`: returns 404 if the module is Disabled
+- Use `[Authorize]` / `[AllowAnonymous]` per endpoint as appropriate
+- Never modify core tables; use `ContentItem` JSON data for module-owned data
 
 ---
 
 ## Step 3 — Frontend: Public Component
 
-The public component renders inside a page slot on the Nuxt 3 public site. It must be **SSR-safe**.
+The public component renders inside a page slot on the Nuxt 3 public site. It is loaded as a **standalone ESM bundle** — Nuxt auto-imports (`useFetch`, `useRuntimeConfig`, etc.) are **not available**.
 
-```vue
-<!-- frontend/public/ContactForm.vue -->
-<script setup lang="ts">
-const props = defineProps<{ moduleKey: string }>()
+### SSR Rules (standalone ESM — different from Nuxt pages)
 
-const { data: config } = await useFetch(`/api/modules/${props.moduleKey}/config`)
+| Rule | Reason |
+|------|--------|
+| No `useFetch` / `useAsyncData` | Nuxt auto-imports are compile-time only; unavailable in standalone bundles |
+| Use plain `fetch()` inside `onMounted` | Browser-only; safe because module slots are client-rendered |
+| No `window`, `document` at top level | The host Nuxt app runs SSR; top-level browser APIs break server rendering |
+| Use `onMounted` / `onUnmounted` for timers and event listeners | Standard Vue lifecycle |
+| Always receive `moduleKey: string` as a prop | Platform passes it when rendering the slot |
 
-const formData = ref<Record<string, string>>({})
-const submitted = ref(false)
-const error = ref<string | null>(null)
+### Shared Vue Instance
 
-async function handleSubmit() {
-  try {
-    await $fetch(`/api/modules/${props.moduleKey}/submit`, {
-      method: 'POST',
-      body: formData.value,
-    })
-    submitted.value = true
-  }
-  catch {
-    error.value = 'Submission failed. Please try again.'
-  }
-}
-</script>
+A standalone ESM bundle must **not** bundle its own copy of Vue. Two Vue instances cause `currentInstance` isolation failures — `onMounted`/`onUnmounted` hooks silently fail to register.
 
-<template>
-  <form v-if="config && !submitted" @submit.prevent="handleSubmit">
-    <div v-for="field in (config.fields as any[])" :key="field.name">
-      <label :for="field.name">{{ field.label }}</label>
-      <textarea
-        v-if="field.type === 'textarea'"
-        :id="field.name"
-        v-model="formData[field.name]"
-        :required="field.required"
-      />
-      <input
-        v-else
-        :id="field.name"
-        :type="field.type"
-        v-model="formData[field.name]"
-        :required="field.required"
-      />
-    </div>
-    <button type="submit">Send</button>
-  </form>
-  <div v-else-if="submitted">
-    <p>{{ (config as any)?.successMessage ?? 'Thank you!' }}</p>
-  </div>
-</template>
+The platform exposes the host Vue instance on `window.__SEEMS_VUE__` (set by `plugins/modules.client.ts` before any dynamic `import()`). Modules read from it via `vue-bridge.js`:
+
+```js
+// frontend/public/vue-bridge.js
+const _v = window.__SEEMS_VUE__
+export const ref              = _v.ref
+export const computed         = _v.computed
+export const watch            = _v.watch
+export const onMounted        = _v.onMounted
+export const onUnmounted      = _v.onUnmounted
+export const defineProps      = _v.defineProps
+export const openBlock        = _v.openBlock
+export const createElementBlock = _v.createElementBlock
+export const renderList       = _v.renderList
+export const Fragment         = _v.Fragment
+export const TransitionGroup  = _v.TransitionGroup
+export const Transition       = _v.Transition
+// add any other Vue APIs your component uses
+export default _v
 ```
 
-### SSR Rules
+### Example Component
 
-- No `window`, `document`, or browser-only APIs at top level
-- Use `onMounted()` for browser-only logic
-- Use `useFetch` or `useAsyncData` — never raw `fetch` — for data that needs SSR hydration
-- The component always receives `moduleKey: string` as a prop
+```vue
+<!-- frontend/public/Slider.vue -->
+<script setup lang="ts">
+import { ref, onMounted, onUnmounted } from 'vue'
 
-### Build as ESM Bundle
+const props = defineProps<{ moduleKey: string }>()
 
-The public component must be compiled and bundled as a **pre-built ESM file** and hosted at a publicly accessible URL. The platform dynamically imports it at runtime — raw `.vue` files are not supported.
+interface Slide {
+  id: string
+  title: string
+  subtitle?: string
+  imageUrl: string
+  ctaText?: string
+  ctaLink?: string
+  order: number
+}
+
+const slides = ref<Slide[]>([])
+const current = ref(0)
+let timer: ReturnType<typeof setInterval> | null = null
+
+function next() { current.value = (current.value + 1) % slides.value.length }
+function prev() { current.value = (current.value - 1 + slides.value.length) % slides.value.length }
+
+onMounted(async () => {
+  try {
+    const res = await fetch(`/api/modules/${props.moduleKey}/slides`)
+    if (res.ok) slides.value = (await res.json()).sort((a: Slide, b: Slide) => a.order - b.order)
+  } catch { /* non-fatal */ }
+  if (slides.value.length > 1) timer = setInterval(next, 5000)
+})
+
+onUnmounted(() => { if (timer) clearInterval(timer) })
+</script>
+```
+
+### Vite Config
 
 ```ts
 // frontend/public/vite.config.ts
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
+import cssInjectedByJs from 'vite-plugin-css-injected-by-js'
+import { fileURLToPath, URL } from 'node:url'
+
+const vueBridgePath = fileURLToPath(new URL('./vue-bridge.js', import.meta.url))
 
 export default defineConfig({
-  plugins: [vue()],
+  plugins: [vue(), cssInjectedByJs()],
+  resolve: {
+    // Redirect bare 'vue' imports to the bridge file.
+    // resolve.alias is applied by Vite core BEFORE plugin resolveId hooks,
+    // which is why this works (a plugin-based approach does not).
+    alias: { vue: vueBridgePath },
+  },
   build: {
+    // Output directly into the API's wwwroot so the API serves it at /modules/{key}/
+    outDir: '../../../../backend/Seems.Api/wwwroot/modules/slider',
+    emptyOutDir: true,
     lib: {
       entry: 'index.ts',
       formats: ['es'],
       fileName: 'component',
     },
-    rollupOptions: {
-      // Vue is provided by the host Nuxt app — do not bundle it
-      external: ['vue'],
-      output: {
-        globals: { vue: 'Vue' },
-      },
-    },
   },
 })
 ```
 
-```ts
-// frontend/public/index.ts
-export { default } from './ContactForm.vue'
-```
+**Key points:**
+- `resolve.alias: { vue: vueBridgePath }` — Rollup inlines `vue-bridge.js` so the output has zero `import from 'vue'` statements. The bundle reads from `window.__SEEMS_VUE__` at runtime.
+- `cssInjectedByJs()` — embeds `<style>` injection in the JS so no separate `component.css` is needed. The bundle is fully self-contained.
+- `outDir` points to the API project's `wwwroot/modules/{key}/` — the API serves the file at `/modules/{key}/component.js`.
 
-Build output: `dist/component.js`
+### package.json
 
-Upload `dist/component.js` to a CDN (or the platform's Media Library) to get the `publicComponentUrl`.
-
----
-
-## Step 4 — Frontend: Admin Component
-
-The admin component appears in the Admin SPA for module configuration.
-
-```vue
-<!-- frontend/admin/ContactFormSettings.vue -->
-<script setup lang="ts">
-import { useApi } from '@/composables/useApi'
-
-const api = useApi()
-const config = ref({ recipientEmail: '', subject: '', successMessage: '', fields: [] })
-
-onMounted(async () => {
-  config.value = await api.get('/api/modules/contact-form/config')
-})
-
-async function save() {
-  await api.put('/api/modules/contact-form/config', config.value)
+```json
+{
+  "name": "@seems-modules/slider-public",
+  "type": "module",
+  "scripts": {
+    "build": "vite build",
+    "dev": "vite build --watch"
+  },
+  "dependencies": { "vue": "^3.5.0" },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@vitejs/plugin-vue": "^5.2.0",
+    "vite": "^6.0.0",
+    "vite-plugin-css-injected-by-js": "^4.0.1"
+  }
 }
-</script>
+```
 
-<template>
-  <div>
-    <h2>Contact Form Settings</h2>
-    <InputText v-model="config.recipientEmail" placeholder="Recipient email" />
-    <InputText v-model="config.subject" placeholder="Subject" />
-    <InputText v-model="config.successMessage" placeholder="Success message" />
-    <Button label="Save" @click="save" />
-  </div>
-</template>
+### index.ts
+
+```ts
+export { default } from './Slider.vue'
+```
+
+### Build
+
+```bash
+cd src/modules/slider/frontend/public
+npm install
+npm run build
+# → Seems.Api/wwwroot/modules/slider/component.js (self-contained, ~7 KB)
 ```
 
 ---
 
-## Step 5 — Register the Module
+## Step 4 — Nuxt Dev Proxy
 
-Registration has two parts: a one-time API call to store the module record, and the automatic runtime loading that happens on every page request.
+In development, the browser's dynamic `import('/modules/slider/component.js')` hits the Nuxt dev server (port 3000). Add a Nitro devProxy so it forwards to the API's wwwroot:
 
-### 5a — Insert via Admin API
+```ts
+// src/frontend/public/nuxt.config.ts
+nitro: {
+  devProxy: {
+    '/modules': { target: 'http://localhost:5000/modules', changeOrigin: true },
+  },
+},
+```
+
+In production, configure your reverse proxy (nginx/Caddy) to forward `/modules/` to the API.
+
+---
+
+## Step 5 — Frontend: Admin Settings Page
+
+Logic modules typically have a dedicated admin page for managing module-specific data (e.g. slides, form configuration).
+
+### Route convention
+
+Add a route named `module-{moduleKey}` inside the AdminShell children in `src/frontend/admin/src/router/index.ts`:
+
+```ts
+{
+  path: 'modules/slider',
+  name: 'module-slider',
+  component: () => import('@/views/modules/slider/SliderSettingsView.vue'),
+  meta: { roles: ['Admin'] },
+},
+```
+
+### Configure button
+
+The Module List automatically shows a gear icon for any module that has a matching named route (`module-{moduleKey}`). No additional wiring is needed — `hasSettingsPage()` in `ModuleListView.vue` resolves the route at runtime.
+
+### Settings page pattern
+
+Follow the pattern in `src/frontend/admin/src/views/modules/slider/SliderSettingsView.vue`:
+- Inline composable using `useApi()` for module-specific endpoints
+- DataTable with row actions: Edit (pencil), Publish/Unpublish toggle, Delete
+- Delete: use a plain `Dialog` controlled by a local `ref<boolean>` — **not** `useConfirm` (see PrimeVue conventions)
+- Form dialog: `:visible` + `@update:visible` — **not** `v-model:visible` (ESLint rule `vue/no-v-model-argument`)
+
+---
+
+## Step 6 — Register the Module
+
+### Via Admin UI (recommended)
+
+1. Navigate to **Admin → Modules → Register Module**
+2. Paste the full `manifest.json` contents into the manifest textarea
+3. Click **Parse** — all fields auto-fill, content types are listed
+4. Click **Register**
+
+### Via API
 
 ```http
 POST /api/modules
@@ -353,62 +440,79 @@ Authorization: Bearer <admin-token>
 Content-Type: application/json
 
 {
-  "moduleKey": "contact-form",
-  "name": "Contact Form",
+  "moduleKey": "slider",
+  "name": "Hero Slider",
   "version": "1.0.0",
-  "publicComponentUrl": "https://cdn.example.com/modules/contact-form/1.0.0/component.js"
+  "publicComponentUrl": "/modules/slider/component.js",
+  "description": "Full-width hero banner",
+  "author": "SEEMS Platform",
+  "contentTypes": [
+    {
+      "key": "slider-slide",
+      "name": "Slider Slide",
+      "schema": "{\"fields\":[{\"name\":\"title\",\"label\":\"Title\",\"type\":\"text\",\"required\":true}]}"
+    }
+  ]
 }
 ```
 
-`publicComponentUrl` is the CDN URL of the ESM bundle built in Step 3. This is the only required registration step.
+`publicComponentUrl` accepts:
+- **Relative path**: `/modules/slider/component.js` (served from the API's wwwroot)
+- **Absolute HTTPS URL**: `https://cdn.example.com/modules/slider/component.js`
 
-### 5b — Automatic runtime loading
+### Updating module metadata
+
+```http
+PUT /api/modules/{id}
+Authorization: Bearer <admin-token>
+Content-Type: application/json
+
+{
+  "name": "Hero Slider",
+  "version": "1.1.0",
+  "publicComponentUrl": "/modules/slider/component.js",
+  "description": "Updated description",
+  "author": "SEEMS Platform"
+}
+```
+
+`moduleKey` is immutable — it is not part of the update payload. Use the pencil icon in the Admin Module List to edit metadata via the UI.
+
+### Module Lifecycle
+
+```
+POST   /api/modules          → Status: Installed  (active, renders in slots)
+PUT    /api/modules/:id      → Updates metadata (name, version, url, description, author)
+PATCH  /api/modules/:id      → Toggles status: Installed ↔ Disabled
+                               (Disabled: all /api/modules/{key}/* return 404)
+DELETE /api/modules/:id      → Removed (ContentItem data is preserved)
+```
+
+### Automatic runtime loading
 
 On every browser load the Nuxt plugin `plugins/modules.client.ts` automatically:
 
-1. Calls `GET /api/modules/installed` (public endpoint, no auth required)
-2. For each module with a `publicComponentUrl`, registers an async loader:
+1. Exposes `window.__SEEMS_VUE__` (the host Vue instance) — must happen before any `import()`
+2. Calls `GET /api/modules/installed` (public, no auth)
+3. For each module with a `publicComponentUrl`, registers an async loader in the module registry
 
 ```ts
 registerModuleComponent(mod.moduleKey, async () => {
-  const remote = await import(/* @vite-ignore */ mod.publicComponentUrl)
+  const remote = await import(/* @vite-ignore */ url)
   return remote.default ?? remote
 })
 ```
 
 No Nuxt rebuild is needed. New modules take effect on the next page load after registration.
 
-### Module Lifecycle
-
-```
-POST /api/modules          → Status: Installed  (active, renders in slots)
-PATCH /api/modules/:id     → Status: Disabled   (APIs return 404, slots show fallback)
-PATCH /api/modules/:id     → Status: Installed  (re-enabled)
-DELETE /api/modules/:id    → Removed            (data optionally preserved in ContentItems)
-```
-
 ---
 
-## Step 6 — Assign to a Page Slot
+## Step 7 — Assign to a Page Slot
 
-Once installed, assign the module to a page slot in the Admin page builder:
-
-1. Edit a page → select a slot (e.g., `sidebar`)
+1. Edit a page → select a slot (e.g., `hero`)
 2. Set **Target Type: Module**
-3. Select the module key (e.g., `contact-form`)
+3. Search and select the module (e.g., `slider`)
 4. Save
-
-This creates a `SlotMapping`:
-
-```json
-{
-  "pageId": "...",
-  "slotKey": "sidebar",
-  "targetType": "Module",
-  "targetId": "contact-form",
-  "order": 0
-}
-```
 
 ### Rendering pipeline
 
@@ -418,13 +522,13 @@ Page → Template → SlotRenderer
                     ├─ targetType === "content" → ContentRenderer
                     └─ targetType === "module"  → ModuleRenderer
                                                     │
-                                                    ├─ useModuleLoader("contact-form")
+                                                    ├─ useModuleLoader("slider")
                                                     ├─ module-registry lookup
                                                     ├─ defineAsyncComponent(loader)
-                                                    └─ <ContactForm moduleKey="contact-form" />
+                                                    └─ <Slider moduleKey="slider" />
 ```
 
-> **Note:** Module slots render **client-side only** (the plugin runs in the browser). They are not included in the SSR HTML. Use `ContentItem` slots for SEO-critical content.
+> **Note:** Module slots render **client-side only** (the plugin runs in the browser). They are excluded from SSR HTML. Use `ContentItem` slots for SEO-critical content.
 
 ---
 
@@ -432,29 +536,68 @@ Page → Template → SlotRenderer
 
 | Rule | Rationale |
 |------|-----------|
-| `moduleKey` must be globally unique kebab-case | Used in URLs, DB keys, component registry, and slot mappings |
-| All backend routes must start with `/api/modules/{moduleKey}/` | Namespace isolation; prevents collision with core APIs |
-| ContentType keys must be prefixed with `{moduleKey}-` | Avoids collisions (e.g., `contact-form-config`, not `config`) |
-| Public component must be SSR-safe | Nuxt 3 renders server-side first |
-| `publicComponentUrl` must serve a pre-compiled ESM with `default` export | The plugin does `remote.default ?? remote` — raw `.vue` files will not work |
-| Only reference `Seems.Shared.Contracts` from backend module code | Loose coupling; modules must not depend on core internals |
-| Schema changes use JSON — never EF Core migrations | Module content types are schema-driven, stored as JSON in `ContentTypes.Schema` |
-| Module data goes through `ContentItem` or module-owned storage | No direct core table modifications |
+| `moduleKey` must be globally unique kebab-case | Used in URLs, DB, component registry, and slot mappings |
+| `moduleKey` is immutable after registration | Changing it would break slot mappings and existing content |
+| All backend routes must start with `api/modules/{moduleKey}` | Namespace isolation; prevents collision with core APIs |
+| ContentType keys must be prefixed with `{moduleKey}-` | Avoids collisions (e.g., `slider-slide`, not `slide`) |
+| `contentTypes[].schema` must use ContentSchema format | Standard JSON Schema causes empty fields in the admin UI |
+| Public component must not bundle its own Vue | Two Vue instances break `onMounted`/`onUnmounted` via `currentInstance` isolation |
+| Use `vue-bridge.js` + `resolve.alias` in vite.config | `external: ['vue']` produces bare `import from 'vue'` which browsers cannot resolve |
+| Use `vite-plugin-css-injected-by-js` | Embeds styles in JS — no separate CSS file to load |
+| Use `fetch()` in `onMounted` — not `useFetch` | `useFetch` is a Nuxt auto-import; unavailable in standalone ESM bundles |
+| `publicComponentUrl` must be `/…` or `https://…` | Validator rejects other formats |
+| Only reference `Seems.Application` from backend modules | Loose coupling; modules must not depend on `Seems.Infrastructure` internals |
+| Module data goes through `ContentItem` or module-owned storage | No direct core table modifications allowed |
 
 ---
 
 ## TypeScript Types
 
 ```typescript
-// src/frontend/public/types/module.ts
+// src/frontend/admin/src/types/modules.ts
 
-export interface ModuleManifest {
+export interface Module {
+  id: string
   moduleKey: string
   name: string
   version: string
-  contentTypes?: { key: string; schema: Record<string, unknown> }[]
-  apis?: { method: string; path: string }[]
+  status: ModuleStatus
+  publicComponentUrl?: string
+  description?: string
+  author?: string
+  createdAt: string
+  updatedAt: string
 }
+
+export type ModuleStatus = 'Installed' | 'Disabled'
+
+export interface RegisterModuleRequest {
+  moduleKey: string
+  name: string
+  version: string
+  publicComponentUrl?: string
+  description?: string
+  author?: string
+  contentTypes?: ContentTypeDecl[]
+}
+
+export interface UpdateModuleRequest {
+  name: string
+  version: string
+  publicComponentUrl?: string
+  description?: string
+  author?: string
+}
+
+export interface ContentTypeDecl {
+  key: string
+  name: string
+  schema: string // serialised ContentSchema JSON
+}
+```
+
+```typescript
+// src/frontend/public/types/module.ts
 
 export interface InstalledModule {
   moduleKey: string
@@ -466,36 +609,18 @@ export interface InstalledModule {
 
 ---
 
-## Backend Contract Types
-
-```csharp
-// Seems.Shared.Contracts.IModuleManifest
-public interface IModuleManifest
-{
-    string ModuleKey { get; }
-    string Name { get; }
-    string Version { get; }
-    IReadOnlyList<SlotDescriptor> Slots { get; }
-}
-
-// Seems.Shared.Contracts.SlotDescriptor
-public record SlotDescriptor(
-    string Key,
-    string Label,
-    string[]? AllowedTypes = null,
-    int? MaxItems = null
-);
-```
-
----
-
 ## Troubleshooting
 
 | Problem | Cause | Fix |
 |---------|-------|-----|
-| Module component not rendering | Plugin loaded but registry lookup fails | Verify `moduleKey` in DB matches `targetId` in `SlotMapping` exactly |
-| Slot shows "Loading module..." forever | `import(url)` failed | Open browser console; check CORS headers on the CDN URL and that the file is valid ESM |
-| Slot shows "Module could not be loaded" | `publicComponentUrl` is null or not set | Set `publicComponentUrl` on the module record via Admin API |
-| Module API returns 404 | Route mismatch or module is Disabled | Check route attribute; verify `Module.Status = Installed` in DB |
-| Content type not appearing in Admin | Module install did not register content types | Manually `POST /api/content-types` with the schema from the manifest |
-| Module renders on client but not in SSR | Top-level browser API usage | Move `window`/`document` access inside `onMounted()` |
+| Module component not rendering | Registry lookup fails | Verify `moduleKey` in DB matches `targetId` in `SlotMapping` exactly |
+| `Failed to resolve module specifier "vue"` | Module bundle uses `external: ['vue']` | Use `vue-bridge.js` + `resolve.alias: { vue: vueBridgePath }` in vite.config |
+| `onMounted` / `onUnmounted` silently ignored | Two Vue instances (module bundled its own Vue) | Fix vite.config — bundle must read from `window.__SEEMS_VUE__` |
+| Slot shows "Loading module..." forever | `import(url)` failed | Check browser console; verify CORS headers and that the file is valid ESM |
+| Slot shows "Module could not be loaded" | `publicComponentUrl` is null | Set it via Admin Module List → pencil icon → edit |
+| Module API returns 404 | Module is Disabled or route mismatch | Enable the module; check `[Route]` attribute matches `moduleKey` |
+| CSS not applied | Styles in separate `component.css` not loaded | Add `vite-plugin-css-injected-by-js` to vite.config |
+| `useFetch` is not defined | Using Nuxt auto-import in standalone ESM | Replace with `fetch()` inside `onMounted` |
+| Content type not appearing in Admin | Install did not register content types | Re-register: DELETE + POST /api/modules with `contentTypes[]` in body |
+| Configure gear icon not showing | No named route `module-{key}` registered | Add the route to `src/frontend/admin/src/router/index.ts` |
+| Admin content type fields empty | Schema uses standard JSON Schema instead of ContentSchema | Change schema to `{ "fields": [{ "name", "label", "type", "required" }] }` |

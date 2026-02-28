@@ -1,0 +1,39 @@
+{
+  "moduleKey": "slider",
+  "name": "Hero Slider",
+  "version": "1.0.0",
+  "description": "Full-width hero banner slider with autoplay and dot navigation.",
+  "author": "SEEMS Platform",
+  "publicComponentUrl": "/modules/slider/component.js",
+  "slots": [
+    {
+      "key": "slider",
+      "label": "Hero Slider",
+      "allowedTypes": null,
+      "maxItems": 1
+    }
+  ],
+  "contentTypes": [
+    {
+      "key": "slider-slide",
+      "name": "Slider Slide",
+      "schema": {
+        "fields": [
+          { "name": "title",    "label": "Title",     "type": "text",   "required": true },
+          { "name": "subtitle", "label": "Subtitle",  "type": "text",   "required": false },
+          { "name": "imageUrl", "label": "Image URL", "type": "text",   "required": true },
+          { "name": "ctaText",  "label": "CTA Text",  "type": "text",   "required": false },
+          { "name": "ctaLink",  "label": "CTA Link",  "type": "text",   "required": false },
+          { "name": "order",    "label": "Order",     "type": "number", "required": false }
+        ]
+      }
+    }
+  ],
+  "apis": [
+    { "method": "GET",    "path": "/api/modules/slider/slides" },
+    { "method": "GET",    "path": "/api/modules/slider/slides/all" },
+    { "method": "POST",   "path": "/api/modules/slider/slides" },
+    { "method": "PUT",    "path": "/api/modules/slider/slides/{id}" },
+    { "method": "DELETE", "path": "/api/modules/slider/slides/{id}" }
+  ]
+}

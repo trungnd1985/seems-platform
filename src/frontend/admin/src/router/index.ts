@@ -60,6 +60,12 @@ const router = createRouter({
           component: () => import('@/views/modules/ModuleListView.vue'),
         },
         {
+          path: 'modules/slider',
+          name: 'module-slider',
+          component: () => import('@/views/modules/slider/SliderSettingsView.vue'),
+          meta: { roles: ['Admin'] },
+        },
+        {
           path: 'roles',
           name: 'roles',
           component: () => import('@/views/roles/RoleListView.vue'),

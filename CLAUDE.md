@@ -29,8 +29,17 @@ Avoid tutorial-style answers.
 - Nuxt renders templates dynamically
 
 ## Content System
-- ContentType: JSON schema (dynamic, no DB migration)
+- ContentType: stores schema as JSON string in **ContentSchema** format (see below) — NOT standard JSON Schema
 - ContentItem: JSON data + status (draft / published)
+
+### ContentSchema format (IMPORTANT)
+`ContentType.Schema` is a JSON-encoded `ContentSchema` object:
+```json
+{ "fields": [{ "name": "title", "label": "Title", "type": "text", "required": true }] }
+```
+Valid `type` values: `text | textarea | richtext | number | boolean | datetime | date | select | media | relation`
+
+Do NOT use standard JSON Schema (`type/properties/required`) — the admin UI will show empty fields.
 
 ## Page Composition
 - Pages composed via slots
@@ -42,13 +51,52 @@ Avoid tutorial-style answers.
 
 # MODULE SYSTEM (IMPORTANT)
 
-- Modules are installable packages (NOT runtime DLLs)
-- Modules are sandboxed and declarative
-- Modules may:
-  - Register APIs under `/api/modules/{moduleKey}`
-  - Declare ContentTypes
-  - Provide Vue components (admin & public)
-  - Render inside predefined slots
+## Two module categories
+
+### 1. Data Modules (no custom backend)
+- Pure content: declare ContentTypes in `manifest.json`, store data as ContentItems
+- Registered entirely via Admin UI (POST `/api/modules` with `contentTypes[]`)
+- No C# code needed
+
+### 2. Logic Modules (custom backend, e.g. Slider)
+- Require a dedicated class library: `src/modules/{key}/backend/Seems.Modules.{Key}/`
+- Project structure:
+  ```
+  src/modules/{key}/
+    backend/
+      Seems.Modules.{Key}.csproj   ← FrameworkReference: Microsoft.AspNetCore.App
+                                      ProjectReference: Seems.Application
+      {Key}Module.cs               ← implements ISeemModule
+      {Key}Controller.cs
+      {Key}Dtos.cs
+    frontend/public/               ← pre-compiled ESM bundle
+    manifest.json
+  ```
+- `Seems.Api.csproj` must add a `<ProjectReference>` to the module project
+- Add the module project to `SeemsPlatform.slnx`
+
+## Auto-discovery (SeemModuleExtensions)
+`LoadSeemModules()` (chained on `AddControllers()` in `Program.cs`) scans
+`AppContext.BaseDirectory` for `Seems.Modules.*.dll` and auto-registers:
+- MVC `AddApplicationPart` (controllers)
+- `AddMediatR` (handlers — existing pipeline behaviors apply automatically)
+- `AddValidatorsFromAssembly` (FluentValidation validators)
+- `AddAutoMapper` (profiles)
+
+The module entry point — one class implementing `ISeemModule`:
+```csharp
+public class SliderModule : ISeemModule
+{
+    public string ModuleKey => "slider";
+    // Override ConfigureServices() only for extra DI beyond the defaults above
+}
+```
+No other wiring in `Program.cs` is required.
+
+## manifest.json rules
+- `contentTypes[].schema` must use **ContentSchema** format (`{ "fields": [...] }`), not JSON Schema
+- Admin "Register Module" dialog: paste the full `manifest.json` → click Parse → fields auto-fill
+- `ModuleStatusMiddleware` gates all `/api/modules/{key}/{action}` routes — returns 404 if Disabled
 - Admin manages modules via UI only
 
 ---
@@ -97,6 +145,7 @@ Avoid tutorial-style answers.
 - Future-ready for i18n & multi-site
 - Loose coupling between core & modules
 - Explicit contracts over magic/reflection
+  - Exception: `SeemModuleExtensions` intentionally uses assembly scanning — this is the module loader boundary
 
 ---
 

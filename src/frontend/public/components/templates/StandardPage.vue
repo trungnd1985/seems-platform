@@ -15,9 +15,9 @@ function getSlotMappings(slotKey: string): SlotMapping[] {
 
 <template>
   <div class="standard-page">
-    <section v-if="getSlotMappings('hero').length" class="slot-hero">
+    <section v-if="getSlotMappings('slider').length" class="slot-hero">
       <SlotRenderer
-        v-for="mapping in getSlotMappings('hero')"
+        v-for="mapping in getSlotMappings('slider')"
         :key="mapping.targetId"
         :mapping="mapping"
       />

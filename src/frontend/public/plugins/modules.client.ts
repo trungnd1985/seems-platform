@@ -1,7 +1,14 @@
+import * as Vue from 'vue'
 import type { InstalledModule } from '~/types/module'
 import { registerModuleComponent } from '~/utils/module-registry'
 
 export default defineNuxtPlugin(async () => {
+  // Expose the host Vue instance on window so dynamically-loaded module
+  // components can use the SAME Vue runtime.  Without this, each module bundle
+  // would have its own Vue copy with its own `currentInstance` variable, causing
+  // onMounted / onUnmounted hooks to silently fail to register.
+  ;(window as any).__SEEMS_VUE__ = Vue
+
   const config = useRuntimeConfig()
   const apiBase = config.public.apiBase as string
 
