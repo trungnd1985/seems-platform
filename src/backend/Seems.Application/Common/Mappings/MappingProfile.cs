@@ -19,7 +19,11 @@ public class MappingProfile : Profile
     {
         CreateMap<Page, PageDto>()
             .ForMember(d => d.ParentTitle, opt => opt.MapFrom(s => s.Parent != null ? s.Parent.Title : null));
-        CreateMap<SlotMapping, SlotMappingDto>();
+        CreateMap<SlotMapping, SlotMappingDto>()
+            .ForMember(d => d.Parameters, opt => opt.MapFrom(s =>
+                s.Parameters == null
+                    ? (JsonElement?)null
+                    : (JsonElement?)JsonDocument.Parse(s.Parameters).RootElement));
         CreateMap<ContentType, ContentTypeDto>();
         CreateMap<Category, CategoryDto>()
             .ForMember(d => d.Children, opt => opt.Ignore())

@@ -17,6 +17,7 @@ export interface SlotMapping {
   targetType: SlotTargetType
   targetId: string
   order: number
+  parameters?: Record<string, unknown> | null
 }
 
 export interface Page {

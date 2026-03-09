@@ -35,7 +35,6 @@ const navGroups: NavGroup[] = [
   {
     label: 'Appearance',
     items: [
-      { label: 'Templates', icon: 'pi pi-objects-column', routeName: 'templates' },
       { label: 'Themes', icon: 'pi pi-palette', routeName: 'themes' },
     ],
   },
@@ -63,7 +62,9 @@ const visibleGroups = computed(() =>
 )
 
 function isActive(routeName: string): boolean {
-  return route.name === routeName
+  if (route.name === routeName) return true
+  if (routeName === 'themes' && route.name === 'theme-templates') return true
+  return false
 }
 
 function navigate(routeName: string): void {
@@ -245,7 +246,7 @@ function toggleCollapse(): void {
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--p-surface-400);
+  color: var(--p-surface-500);
   padding: 0.875rem 0.625rem 0.3rem;
   white-space: nowrap;
 }
@@ -316,7 +317,7 @@ function toggleCollapse(): void {
   border: none;
   border-top: 1px solid var(--p-surface-200);
   background: transparent;
-  color: var(--p-surface-400);
+  color: var(--p-surface-500);
   cursor: pointer;
   display: flex;
   align-items: center;

@@ -5,6 +5,7 @@ using Seems.Application.Pages.Commands.AddPageSlot;
 using Seems.Application.Pages.Commands.CreatePage;
 using Seems.Application.Pages.Commands.DeletePage;
 using Seems.Application.Pages.Commands.RemovePageSlot;
+using Seems.Application.Pages.Commands.UpdateSlotParameters;
 using Seems.Application.Pages.Commands.ReorderPageSlots;
 using Seems.Application.Pages.Commands.SetDefaultPage;
 using Seems.Application.Pages.Commands.UpdatePage;
@@ -65,7 +66,8 @@ public class PagesController(ISender sender) : ControllerBase
     public async Task<IActionResult> Sitemap()
     {
         var result = await sender.Send(new GetPageTreeQuery());
-        var sitemap = result.Select(p => new { p.Path, p.UpdatedAt });
+        // Exclude parametric pages — they have no fixed canonical URL
+        var sitemap = result.Where(p => !p.Path.Contains(':')).Select(p => new { p.Path, p.UpdatedAt });
         return Ok(sitemap);
     }
 
@@ -133,6 +135,14 @@ public class PagesController(ISender sender) : ControllerBase
         return NoContent();
     }
 
+    [HttpPatch("{pageId:guid}/slots/{slotId:guid}/parameters")]
+    [Authorize]
+    public async Task<IActionResult> UpdateSlotParameters(Guid pageId, Guid slotId, [FromBody] UpdateSlotParametersRequest request)
+    {
+        await sender.Send(new UpdateSlotParametersCommand(pageId, slotId, request.Parameters));
+        return NoContent();
+    }
+
     [HttpPatch("{pageId:guid}/slots/order")]
     [Authorize]
     public async Task<IActionResult> ReorderSlots(Guid pageId, [FromBody] IReadOnlyList<SlotOrderItem> items)
@@ -142,4 +152,5 @@ public class PagesController(ISender sender) : ControllerBase
     }
 }
 
+public record UpdateSlotParametersRequest(Dictionary<string, System.Text.Json.JsonElement>? Parameters);
 public record UpdatePageStatusRequest(ContentStatus Status);

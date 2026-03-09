@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
 import Button from 'primevue/button'
-import Tag from 'primevue/tag'
 import Dialog from 'primevue/dialog'
 import Toast from 'primevue/toast'
 import { useToast } from 'primevue/usetoast'
@@ -12,10 +12,20 @@ import { useThemes } from '@/composables/useThemes'
 import TemplateFormDialog from './components/TemplateFormDialog.vue'
 import type { Template, TemplateSlotDef } from '@/types/templates'
 
+const route = useRoute()
+const router = useRouter()
 const toast = useToast()
+
+const themeKey = computed(() => route.params.themeKey as string)
+
 const { templates, loading, error, fetchTemplates, createTemplate, updateTemplate, deleteTemplate } =
   useTemplates()
 const { themes, fetchThemes } = useThemes()
+
+const theme = computed(() => themes.value.find((t) => t.key === themeKey.value) ?? null)
+const filteredTemplates = computed(() =>
+  templates.value.filter((t) => t.themeKey === themeKey.value),
+)
 
 const formDialogVisible = ref(false)
 const selectedTemplate = ref<Template | null>(null)
@@ -27,6 +37,10 @@ const deleting = ref(false)
 onMounted(async () => {
   await Promise.all([fetchTemplates(), fetchThemes()])
 })
+
+function goBack() {
+  void router.push({ name: 'themes' })
+}
 
 function openCreate() {
   selectedTemplate.value = null
@@ -104,10 +118,22 @@ function cancelDelete() {
   <div class="templates-page">
     <Toast />
 
+    <div class="breadcrumb">
+      <button class="breadcrumb-link" @click="goBack">Themes</button>
+      <i class="pi pi-chevron-right breadcrumb-sep" />
+      <span class="breadcrumb-current">
+        {{ theme?.name ?? themeKey }}
+      </span>
+      <i class="pi pi-chevron-right breadcrumb-sep" />
+      <span class="breadcrumb-current">Templates</span>
+    </div>
+
     <div class="page-header">
       <div>
         <h1 class="page-title">Templates</h1>
-        <p class="page-subtitle">Define page layouts and their named slot structure.</p>
+        <p class="page-subtitle">
+          Layouts for theme <code class="key-badge">{{ themeKey }}</code>.
+        </p>
       </div>
       <Button label="New Template" icon="pi pi-plus" @click="openCreate" />
     </div>
@@ -115,7 +141,7 @@ function cancelDelete() {
     <div v-if="error" class="error-banner">{{ error }}</div>
 
     <DataTable
-      :value="templates"
+      :value="filteredTemplates"
       :loading="loading"
       striped-rows
       class="templates-table"
@@ -129,20 +155,6 @@ function cancelDelete() {
       <Column field="name" header="Name">
         <template #body="{ data }">
           <span class="tpl-name">{{ data.name }}</span>
-        </template>
-      </Column>
-
-      <Column field="themeKey" header="Theme" style="width: 180px">
-        <template #body="{ data }">
-          <div class="theme-cell">
-            <code class="key-badge">{{ data.themeKey }}</code>
-            <Tag
-              v-if="!data.themeExists"
-              value="missing"
-              severity="danger"
-              class="ml-1"
-            />
-          </div>
         </template>
       </Column>
 
@@ -180,7 +192,7 @@ function cancelDelete() {
       :visible="formDialogVisible"
       @update:visible="formDialogVisible = $event"
       :template="selectedTemplate"
-      :themes="themes"
+      :locked-theme-key="themeKey"
       @saved="onSaved"
     />
 
@@ -212,6 +224,38 @@ function cancelDelete() {
 .templates-page {
   padding: 1.5rem;
   max-width: 1000px;
+}
+
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  margin-bottom: 1.25rem;
+  font-size: 0.875rem;
+  color: var(--p-text-muted-color);
+}
+
+.breadcrumb-link {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--p-primary-color);
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-family: inherit;
+}
+
+.breadcrumb-link:hover {
+  text-decoration: underline;
+}
+
+.breadcrumb-sep {
+  font-size: 0.625rem;
+  color: var(--p-surface-400);
+}
+
+.breadcrumb-current {
+  color: var(--p-surface-600);
 }
 
 .page-header {
@@ -254,16 +298,6 @@ function cancelDelete() {
 
 .tpl-name {
   font-weight: 500;
-}
-
-.theme-cell {
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
-}
-
-.ml-1 {
-  margin-left: 0.25rem;
 }
 
 .slot-count {

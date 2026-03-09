@@ -21,4 +21,6 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  color: var(--p-text-color);
+  background-color: var(--p-surface-50);
 }

@@ -40,14 +40,14 @@ const router = createRouter({
           component: () => import('@/views/content/CategoryListView.vue'),
         },
         {
-          path: 'templates',
-          name: 'templates',
-          component: () => import('@/views/templates/TemplateListView.vue'),
-        },
-        {
           path: 'themes',
           name: 'themes',
           component: () => import('@/views/themes/ThemeManagerView.vue'),
+        },
+        {
+          path: 'themes/:themeKey/templates',
+          name: 'theme-templates',
+          component: () => import('@/views/templates/TemplateListView.vue'),
         },
         {
           path: 'media',

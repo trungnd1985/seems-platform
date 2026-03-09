@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
 import Button from 'primevue/button'
@@ -10,6 +11,7 @@ import { useThemes } from '@/composables/useThemes'
 import ThemeFormDialog from './components/ThemeFormDialog.vue'
 import type { Theme } from '@/types/themes'
 
+const router = useRouter()
 const toast = useToast()
 const { themes, loading, error, fetchThemes, createTheme, updateTheme, deleteTheme } = useThemes()
 
@@ -83,6 +85,10 @@ function cancelDelete() {
   deleteDialogVisible.value = false
   themeToDelete.value = null
 }
+
+function openTemplates(theme: Theme) {
+  void router.push({ name: 'theme-templates', params: { themeKey: theme.key } })
+}
 </script>
 
 <template>
@@ -136,9 +142,18 @@ function cancelDelete() {
         </template>
       </Column>
 
-      <Column header="Actions" style="width: 110px">
+      <Column header="Actions" style="width: 150px">
         <template #body="{ data }">
           <div class="actions">
+            <Button
+              icon="pi pi-objects-column"
+              text
+              rounded
+              severity="secondary"
+              aria-label="Templates"
+              v-tooltip.top="'Manage Templates'"
+              @click="openTemplates(data)"
+            />
             <Button
               icon="pi pi-pencil"
               text
