@@ -9,6 +9,7 @@ import type {
   AddSlotRequest,
   SlotMapping,
   SlotOrderItem,
+  PageSortItem,
   PageStatus,
 } from '@/types/pages'
 
@@ -104,6 +105,10 @@ export function usePages() {
     await api.patch(`/pages/${pageId}/slots/${slotId}/parameters`, { parameters })
   }
 
+  async function reorderPages(items: PageSortItem[]): Promise<void> {
+    await api.patch('/pages/reorder', items)
+  }
+
   async function setDefaultPage(id: string): Promise<Page> {
     const { data } = await api.patch<Page>(`/pages/${id}/set-default`)
     return data
@@ -126,6 +131,7 @@ export function usePages() {
     removeSlot,
     reorderSlots,
     updateSlotParameters,
+    reorderPages,
     setDefaultPage,
   }
 }

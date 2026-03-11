@@ -2,12 +2,14 @@ import { type Component } from 'vue'
 import StandardPage from '~/components/templates/StandardPage.vue'
 import LandingPage from '~/components/templates/LandingPage.vue'
 import BlogPost from '~/components/templates/BlogPost.vue'
+import ContactPage from '~/components/templates/ContactPage.vue'
 
 // Base template map — used when no theme override exists
 const templateMap: Record<string, Component> = {
   'standard-page': StandardPage,
   'landing-page': LandingPage,
   'blog-post': BlogPost,
+  'contact-page': ContactPage,
 }
 
 // Theme-specific overrides: themeKey → templateKey → Component

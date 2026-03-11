@@ -1,21 +1,17 @@
+using MediatR;
 using Microsoft.AspNetCore.Mvc;
-using Seems.Domain.Enums;
-using Seems.Domain.Interfaces;
+using Seems.Application.Pages.Queries.GetNavigationPages;
 
 namespace Seems.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class NavigationController(IPageRepository pageRepository) : ControllerBase
+public class NavigationController(ISender sender) : ControllerBase
 {
     [HttpGet]
-    public async Task<IActionResult> Get()
+    public async Task<IActionResult> Get(CancellationToken cancellationToken)
     {
-        var pages = await pageRepository.GetPublishedPagesAsync();
-        var nav = pages
-            .Where(p => p.Slug != "/")
-            .Select(p => new { label = p.Title, slug = p.Slug })
-            .ToList();
+        var nav = await sender.Send(new GetNavigationPagesQuery(), cancellationToken);
         return Ok(nav);
     }
 }

@@ -12,5 +12,6 @@ public record RegisterModuleCommand(
     string? PublicComponentUrl,
     string? Description,
     string? Author,
-    IReadOnlyList<ContentTypeDecl>? ContentTypes
+    IReadOnlyList<ContentTypeDecl>? ContentTypes,
+    string? DefaultParametersJson
 ) : IRequest<ModuleDto>;

@@ -17,5 +17,6 @@ public class ModuleConfiguration : IEntityTypeConfiguration<Module>
         builder.Property(e => e.PublicComponentUrl).HasMaxLength(2048);
         builder.Property(e => e.Description).HasMaxLength(512);
         builder.Property(e => e.Author).HasMaxLength(256);
+        builder.Property(e => e.DefaultParametersJson).HasColumnType("jsonb");
     }
 }

@@ -7,6 +7,7 @@ using Seems.Application.Pages.Commands.DeletePage;
 using Seems.Application.Pages.Commands.RemovePageSlot;
 using Seems.Application.Pages.Commands.UpdateSlotParameters;
 using Seems.Application.Pages.Commands.ReorderPageSlots;
+using Seems.Application.Pages.Commands.ReorderPages;
 using Seems.Application.Pages.Commands.SetDefaultPage;
 using Seems.Application.Pages.Commands.UpdatePage;
 using Seems.Application.Pages.Commands.UpdatePageStatus;
@@ -112,6 +113,14 @@ public class PagesController(ISender sender) : ControllerBase
     {
         var result = await sender.Send(new SetDefaultPageCommand(id));
         return Ok(result);
+    }
+
+    [HttpPatch("reorder")]
+    [Authorize]
+    public async Task<IActionResult> ReorderPages([FromBody] IReadOnlyList<PageSortItem> items)
+    {
+        await sender.Send(new ReorderPagesCommand(items));
+        return NoContent();
     }
 
     // --- Slot composition ---

@@ -1,0 +1,33 @@
+{
+  "moduleKey": "contact-form",
+  "name": "Contact Form",
+  "version": "1.0.0",
+  "description": "Configurable contact form. Admin sets which input fields are shown, labels, required flags, and submit/success copy via slot parameters.",
+  "author": "SEEMS Platform",
+  "publicComponentUrl": "/modules/contact-form/component.js",
+  "slots": [
+    {
+      "key": "form",
+      "label": "Contact Form",
+      "allowedTypes": null,
+      "maxItems": 1
+    }
+  ],
+  "contentTypes": [],
+  "parameters": {
+    "description": "Slot parameters configure the form. All keys are optional — defaults are used when absent.",
+    "fields": [
+      { "name": "name",    "label": "Full Name",      "type": "text",     "required": true,  "enabled": true, "placeholder": "Your full name",      "span": 1 },
+      { "name": "email",   "label": "Email Address",  "type": "email",    "required": true,  "enabled": true, "placeholder": "your@email.com",      "span": 1 },
+      { "name": "phone",   "label": "Phone Number",   "type": "tel",      "required": false, "enabled": false,"placeholder": "+1 234 567 890",      "span": 1 },
+      { "name": "company", "label": "Company",        "type": "text",     "required": false, "enabled": false,"placeholder": "Your company name",   "span": 1 },
+      { "name": "subject", "label": "Subject",        "type": "text",     "required": true,  "enabled": true, "placeholder": "How can we help?",    "span": 2 },
+      { "name": "message", "label": "Message",        "type": "textarea", "required": true,  "enabled": true, "placeholder": "Write your message…", "span": 2 }
+    ],
+    "submitLabel": "Send Message",
+    "successMessage": "Your message has been sent. We'll be in touch shortly!"
+  },
+  "apis": [
+    { "method": "POST", "path": "/api/modules/contact-form/submit" }
+  ]
+}

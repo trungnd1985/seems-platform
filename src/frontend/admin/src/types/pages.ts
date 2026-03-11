@@ -89,6 +89,11 @@ export interface SlotOrderItem {
   order: number
 }
 
+export interface PageSortItem {
+  pageId: string
+  sortOrder: number
+}
+
 export const PAGE_STATUS_SEVERITIES: Record<PageStatus, string> = {
   Draft: 'secondary',
   Published: 'success',

@@ -335,6 +335,10 @@ function isLast(slot: SlotMapping): boolean {
       :page-id="page.id"
       :slot-id="paramsSlot.id"
       :slot-key="paramsSlot.slotKey"
+      :target-type="paramsSlot.targetType"
+      :module-default-parameters-json="paramsSlot.targetType === 'Module'
+        ? (modules.find(m => m.moduleKey === paramsSlot!.targetId)?.defaultParametersJson ?? null)
+        : null"
       :initial-parameters="paramsSlot.parameters"
       @saved="onParamsSaved(paramsSlot!.id, $event)"
     />

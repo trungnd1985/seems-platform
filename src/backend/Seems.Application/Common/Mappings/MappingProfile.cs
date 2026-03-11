@@ -23,7 +23,7 @@ public class MappingProfile : Profile
             .ForMember(d => d.Parameters, opt => opt.MapFrom(s =>
                 s.Parameters == null
                     ? (JsonElement?)null
-                    : (JsonElement?)JsonDocument.Parse(s.Parameters).RootElement));
+                    : (JsonElement?)JsonDocument.Parse(s.Parameters).RootElement.Clone()));
         CreateMap<ContentType, ContentTypeDto>();
         CreateMap<Category, CategoryDto>()
             .ForMember(d => d.Children, opt => opt.Ignore())

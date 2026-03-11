@@ -70,9 +70,11 @@ public class PageRepository(AppDbContext context) : Repository<Page>(context), I
         return null;
     }
 
+    /// <inheritdoc/>
     public async Task<IReadOnlyList<Page>> GetPublishedPagesAsync(CancellationToken ct = default)
         => await DbSet
             .Where(p => p.Status == ContentStatus.Published)
+            .OrderBy(p => p.SortOrder)
             .ToListAsync(ct);
 
     public async Task<(IReadOnlyList<Page> Items, int Total)> GetPagedAsync(int page, int pageSize, CancellationToken ct = default)

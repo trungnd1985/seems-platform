@@ -6,5 +6,6 @@
   <Project Path="Seems.Shared/Seems.Shared.csproj" />
   <Folder Name="/modules/">
     <Project Path="../modules/slider/backend/Seems.Modules.Slider.csproj" />
+    <Project Path="../modules/contact-form/backend/Seems.Modules.ContactForm.csproj" />
   </Folder>
 </Solution>

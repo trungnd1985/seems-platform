@@ -30,6 +30,7 @@ public class RegisterModuleHandler(
             PublicComponentUrl = request.PublicComponentUrl,
             Description = request.Description,
             Author = request.Author,
+            DefaultParametersJson = request.DefaultParametersJson,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow,
         };

@@ -29,6 +29,7 @@ const moduleComponent = isModule.value
       v-else-if="isModule && moduleComponent"
       :is="moduleComponent"
       :module-key="mapping.targetId"
+      :parameters="mapping.parameters ?? null"
     />
   </SlotContainer>
 </template>

@@ -11,6 +11,7 @@ public interface IPageRepository : IRepository<Page>
     /// <summary>Resolves a request path against static pages (exact match) then parametric page patterns.
     /// Returns the matched page and any extracted URL parameters, or null if no match.</summary>
     Task<(Page Page, Dictionary<string, string> UrlParams)?> ResolveByPathAsync(string requestPath, bool publishedOnly, CancellationToken ct = default);
+    /// <summary>Returns all published pages ordered by <see cref="Page.SortOrder"/>.</summary>
     Task<IReadOnlyList<Page>> GetPublishedPagesAsync(CancellationToken ct = default);
     Task<(IReadOnlyList<Page> Items, int Total)> GetPagedAsync(int page, int pageSize, CancellationToken ct = default);
     Task<Page?> GetWithSlotsAsync(Guid id, CancellationToken ct = default);
