@@ -12,7 +12,10 @@ seems-platform/
 ├── dev-down.sh / dev-down.ps1 / dev-down.cmd # Stop containers (bash / PowerShell / cmd)
 ├── docs/                               # Documentation
 │   ├── project-structure.md            # This file
-│   └── module-development.md           # How to build a SEEMS module
+│   ├── module-development.md           # How to build a SEEMS module
+│   ├── theme-development.md            # How to build a SEEMS theme
+│   ├── content-search.md               # Content item search architecture
+│   └── slot-rendering-roadmap.md       # Future slot rendering capabilities
 ├── src/
 │   ├── backend/                        # ASP.NET Core 10 Web API (Clean Architecture)
 │   └── frontend/
@@ -249,14 +252,14 @@ src/backend/
 │   │   ├── BaseEntity.cs                   # Id (Guid), CreatedAt, UpdatedAt
 │   │   └── IAuditableEntity.cs
 │   ├── Entities/
-│   │   ├── Page.cs                         # Slug, Title, TemplateKey, SeoMeta (JSON)
-│   │   ├── SlotMapping.cs                  # PageId, SlotKey, TargetType, TargetId, Order
-│   │   ├── ContentType.cs                  # Key, Name, Schema (JSON)
+│   │   ├── Page.cs                         # Slug, Path, Title, TemplateKey, SeoMeta (JSON), ShowInNavigation, IsDefault
+│   │   ├── SlotMapping.cs                  # PageId, SlotKey, TargetType, TargetId, Order, Parameters (jsonb)
+│   │   ├── ContentType.cs                  # Key, Name, Schema (JSON — ContentSchema format)
 │   │   ├── ContentItem.cs                  # ContentTypeKey, Data (JSON), Status
 │   │   ├── Template.cs                     # Key, Name, ThemeKey, Slots (JSON)
 │   │   ├── Theme.cs                        # Key, Name
 │   │   ├── Media.cs                        # FileName, Url, MimeType, Size
-│   │   ├── Module.cs                       # ModuleKey, Name, Version, Status
+│   │   ├── Module.cs                       # ModuleKey, Name, Version, Status, DefaultParametersJson (jsonb)
 │   │   └── Identity/
 │   │       ├── AppUser.cs                  # extends IdentityUser<Guid>
 │   │       └── AppRole.cs                  # extends IdentityRole<Guid>
@@ -268,8 +271,8 @@ src/backend/
 │   │   └── SeoMeta.cs                     # Title, Description, Og*, Canonical, Robots
 │   └── Interfaces/
 │       ├── IRepository.cs                 # Generic CRUD
-│       ├── IPageRepository.cs             # GetBySlug, GetPublishedPages
-│       ├── IContentRepository.cs          # GetByContentTypeKey
+│       ├── IPageRepository.cs             # GetBySlug, GetPublishedPages, ResolveByPathAsync, hierarchy queries
+│       ├── IContentRepository.cs          # GetByContentTypeKey, search
 │       └── IUnitOfWork.cs
 │
 ├── Seems.Application/                      # → Domain
@@ -287,11 +290,25 @@ src/backend/
 │   │   └── Mappings/
 │   │       └── MappingProfile.cs
 │   ├── Pages/
-│   │   ├── Dtos/PageDto.cs
-│   │   ├── Commands/CreatePage/           # Command + Handler + Validator
+│   │   ├── Dtos/PageDto.cs                # PageDto, SlotMappingDto (with Parameters)
+│   │   ├── Commands/
+│   │   │   ├── CreatePage/                # Command + Handler + Validator
+│   │   │   ├── UpdatePage/                # Command + Handler + Validator
+│   │   │   ├── DeletePage/                # Command + Handler
+│   │   │   ├── UpdatePageStatus/          # Command + Handler
+│   │   │   ├── SetDefaultPage/            # Command + Handler
+│   │   │   ├── ReorderPages/              # Command + Handler
+│   │   │   ├── AddPageSlot/               # Command + Handler + Validator
+│   │   │   ├── RemovePageSlot/            # Command + Handler
+│   │   │   ├── ReorderPageSlots/          # Command + Handler
+│   │   │   └── UpdateSlotParameters/      # Command + Handler
 │   │   └── Queries/
-│   │       ├── GetPageBySlug/             # Query + Handler
-│   │       └── ListPages/                 # Query + Handler
+│   │       ├── GetPageBySlug/             # Query + Handler (resolves by path, supports parametric slugs)
+│   │       ├── GetPageById/               # Query + Handler
+│   │       ├── GetDefaultPage/            # Query + Handler
+│   │       ├── GetPageTree/               # Query + Handler (full tree for admin)
+│   │       ├── GetNavigationPages/        # Query + Handler (published nav tree, ShowInNavigation filter)
+│   │       └── ListPages/                 # Query + Handler (paginated)
 │   ├── Content/
 │   │   ├── Dtos/ContentTypeDto.cs, ContentItemDto.cs
 │   │   ├── Commands/CreateContentItem/    # Command + Handler + Validator
@@ -330,16 +347,21 @@ src/backend/
 │   ├── appsettings.Development.json
 │   ├── Controllers/
 │   │   ├── AuthController.cs              # POST /api/auth/login
-│   │   ├── PagesController.cs             # CRUD + by-slug + sitemap
+│   │   ├── PagesController.cs             # Full CRUD + by-slug + tree + sitemap + slots + slot parameters
 │   │   ├── ContentTypesController.cs      # CRUD
 │   │   ├── ContentItemsController.cs      # CRUD
-│   │   ├── TemplatesController.cs         # List
-│   │   ├── ThemesController.cs            # List
-│   │   ├── MediaController.cs             # List
-│   │   ├── ModulesController.cs           # List
-│   │   └── NavigationController.cs        # GET /api/navigation
+│   │   ├── TemplatesController.cs         # CRUD
+│   │   ├── ThemesController.cs            # CRUD
+│   │   ├── MediaController.cs             # Upload, delete, folders CRUD
+│   │   ├── ModulesController.cs           # CRUD + toggle status + /installed (public)
+│   │   ├── NavigationController.cs        # GET /api/navigation → published nav tree (ISender)
+│   │   ├── RolesController.cs             # CRUD (system roles immutable)
+│   │   ├── UsersController.cs             # CRUD + reset-password + lock/unlock
+│   │   ├── SettingsController.cs          # GET/PUT storage settings + GET/PUT site info
+│   │   ├── CategoriesController.cs        # CRUD + tree
+│   │   └── AuditLogsController.cs         # GET (read-only)
 │   └── Filters/
-│       └── ApiExceptionFilter.cs          # Validation, 401, 404, 500 handling
+│       └── ApiExceptionFilter.cs          # Validation, 401, 404, 409, 500 handling
 │
 └── Seems.Shared/                           # Zero dependencies (module contracts)
     └── Contracts/
@@ -359,23 +381,105 @@ Seems.Api           ← Seems.Application, Seems.Infrastructure
 
 ### API Endpoints
 
+#### Auth
 | Method | Path | Auth | Purpose |
 |--------|------|------|---------|
 | POST | `/api/auth/login` | Public | Authenticate, return JWT |
+
+#### Pages
+| Method | Path | Auth | Purpose |
+|--------|------|------|---------|
 | GET | `/api/pages` | JWT | List pages (paginated) |
-| GET | `/api/pages/by-slug/{slug}` | Public | Resolve page by slug |
+| GET | `/api/pages/{id}` | JWT | Get page by ID |
+| GET | `/api/pages/default` | Public | Get the default (home) page |
+| GET | `/api/pages/by-slug/{*slug}` | Public | Resolve page by path (exact + parametric) |
+| GET | `/api/pages/tree` | JWT | Full page tree for admin |
 | GET | `/api/pages/sitemap` | Public | Sitemap data |
 | POST | `/api/pages` | JWT | Create page |
+| PUT | `/api/pages/{id}` | JWT | Update page |
+| DELETE | `/api/pages/{id}` | JWT | Delete page |
+| PATCH | `/api/pages/{id}/status` | JWT | Publish / draft / archive |
+| PATCH | `/api/pages/{id}/set-default` | JWT | Set as homepage |
+| PATCH | `/api/pages/reorder` | JWT | Reorder pages (sort order) |
+| POST | `/api/pages/{pageId}/slots` | JWT | Add slot mapping |
+| DELETE | `/api/pages/{pageId}/slots/{slotId}` | JWT | Remove slot mapping |
+| PATCH | `/api/pages/{pageId}/slots/{slotId}/parameters` | JWT | Update slot parameters (jsonb) |
+| PATCH | `/api/pages/{pageId}/slots/order` | JWT | Reorder slot mappings |
+
+#### Navigation
+| Method | Path | Auth | Purpose |
+|--------|------|------|---------|
+| GET | `/api/navigation` | Public | Published nav tree (ShowInNavigation, hierarchical) |
+
+#### Content Types
+| Method | Path | Auth | Purpose |
+|--------|------|------|---------|
 | GET | `/api/content-types` | JWT | List content types |
+| GET | `/api/content-types/{id}` | JWT | Get content type |
 | POST | `/api/content-types` | JWT | Create content type |
-| GET | `/api/content-items` | JWT | List content items (paginated) |
+| PUT | `/api/content-types/{id}` | JWT | Update content type |
+| DELETE | `/api/content-types/{id}` | JWT | Delete content type |
+
+#### Content Items
+| Method | Path | Auth | Purpose |
+|--------|------|------|---------|
+| GET | `/api/content-items` | JWT | List content items (paginated, filterable) |
 | GET | `/api/content-items/{id}` | Public | Fetch content item |
 | POST | `/api/content-items` | JWT | Create content item |
+| PUT | `/api/content-items/{id}` | JWT | Update content item |
+| DELETE | `/api/content-items/{id}` | JWT | Delete content item |
+
+#### Templates & Themes
+| Method | Path | Auth | Purpose |
+|--------|------|------|---------|
 | GET | `/api/templates` | JWT | List templates |
+| GET | `/api/templates/{id}` | JWT | Get template |
+| POST | `/api/templates` | JWT | Create template |
+| PUT | `/api/templates/{id}` | JWT | Update template |
+| DELETE | `/api/templates/{id}` | JWT | Delete template |
 | GET | `/api/themes` | JWT | List themes |
-| GET | `/api/media` | JWT | List media |
-| GET | `/api/modules` | JWT | List modules |
-| GET | `/api/navigation` | Public | Site navigation tree |
+| GET | `/api/themes/{id}` | JWT | Get theme |
+| GET | `/api/themes/by-key/{key}` | Public | Get active theme by key |
+| POST | `/api/themes` | JWT | Create theme |
+| PUT | `/api/themes/{id}` | JWT | Update theme |
+| DELETE | `/api/themes/{id}` | JWT | Delete theme |
+
+#### Media
+| Method | Path | Auth | Purpose |
+|--------|------|------|---------|
+| GET | `/api/media` | JWT | List media (paginated) |
+| GET | `/api/media/{id}` | JWT | Get media item |
+| POST | `/api/media/upload` | JWT | Upload file |
+| DELETE | `/api/media/{id}` | JWT | Delete media |
+| PATCH | `/api/media/{id}/move` | JWT | Move to folder |
+| GET | `/api/media/folders` | JWT | List folders |
+| POST | `/api/media/folders` | JWT | Create folder |
+| PUT | `/api/media/folders/{id}` | JWT | Rename folder |
+| DELETE | `/api/media/folders/{id}` | JWT | Delete folder |
+
+#### Modules
+| Method | Path | Auth | Purpose |
+|--------|------|------|---------|
+| GET | `/api/modules` | JWT | List all modules |
+| GET | `/api/modules/installed` | Public | List installed (active) modules |
+| POST | `/api/modules` | JWT | Register module |
+| PUT | `/api/modules/{id}` | JWT | Update module metadata |
+| PATCH | `/api/modules/{id}` | JWT | Toggle Installed ↔ Disabled |
+| DELETE | `/api/modules/{id}` | JWT | Unregister module |
+
+#### Users, Roles & Settings
+| Method | Path | Auth | Purpose |
+|--------|------|------|---------|
+| GET/POST/PUT/DELETE | `/api/users` | JWT | User management (Admin only) |
+| POST | `/api/users/{id}/reset-password` | JWT | Reset password |
+| POST | `/api/users/{id}/lock` | JWT | Lock user account |
+| POST | `/api/users/{id}/unlock` | JWT | Unlock user account |
+| GET/POST/PUT/DELETE | `/api/roles` | JWT | Role management (system roles immutable) |
+| GET/PUT | `/api/settings/site` | JWT | Site info (name, tagline, logo, favicon) |
+| GET/PUT | `/api/settings/storage` | JWT | Storage provider configuration |
+| GET | `/api/categories` | JWT | List categories |
+| GET | `/api/categories/tree` | JWT | Category tree |
+| GET | `/api/audit-logs` | JWT | Audit log viewer |
 
 ---
 

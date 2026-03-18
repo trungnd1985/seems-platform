@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Seems.Domain.ValueObjects;
 
 namespace Seems.Application.Pages.Dtos;
@@ -20,6 +21,8 @@ public class PageDto
     public ICollection<SlotMappingDto> Slots { get; set; } = [];
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
+    /// <summary>Populated only when the page was resolved via a parametric path pattern.</summary>
+    public Dictionary<string, string>? UrlParameters { get; set; }
 }
 
 public class SlotMappingDto
@@ -29,4 +32,5 @@ public class SlotMappingDto
     public string TargetType { get; set; } = string.Empty;
     public string TargetId { get; set; } = string.Empty;
     public int Order { get; set; }
+    public JsonElement? Parameters { get; set; }
 }

@@ -17,6 +17,7 @@ export interface SlotMapping {
   targetType: SlotTargetType
   targetId: string
   order: number
+  parameters?: Record<string, unknown> | null
 }
 
 export interface Page {
@@ -86,6 +87,11 @@ export interface AddSlotRequest {
 export interface SlotOrderItem {
   slotId: string
   order: number
+}
+
+export interface PageSortItem {
+  pageId: string
+  sortOrder: number
 }
 
 export const PAGE_STATUS_SEVERITIES: Record<PageStatus, string> = {

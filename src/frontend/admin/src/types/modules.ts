@@ -7,6 +7,7 @@ export interface Module {
   publicComponentUrl?: string
   description?: string
   author?: string
+  defaultParametersJson?: string | null
   createdAt: string
   updatedAt: string
 }
@@ -27,6 +28,7 @@ export interface RegisterModuleRequest {
   description?: string
   author?: string
   contentTypes?: ContentTypeDecl[]
+  defaultParametersJson?: string | null
 }
 
 export interface UpdateModuleRequest {

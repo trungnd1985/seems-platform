@@ -21,9 +21,60 @@ public class PageRepository(AppDbContext context) : Repository<Page>(context), I
             .Include(p => p.Parent)
             .FirstOrDefaultAsync(p => p.Path == path && p.Status == ContentStatus.Published, ct);
 
+    /// <inheritdoc/>
+    public async Task<(Page Page, Dictionary<string, string> UrlParams)?> ResolveByPathAsync(
+        string requestPath, bool publishedOnly, CancellationToken ct = default)
+    {
+        var baseQuery = DbSet
+            .Include(p => p.Slots.OrderBy(s => s.Order))
+            .Include(p => p.Parent);
+
+        // 1. Exact match (fast path — avoids loading all parametric pages)
+        var exact = publishedOnly
+            ? await baseQuery.FirstOrDefaultAsync(p => p.Path == requestPath && p.Status == ContentStatus.Published, ct)
+            : await baseQuery.FirstOrDefaultAsync(p => p.Path == requestPath, ct);
+
+        if (exact is not null)
+            return (exact, []);
+
+        // 2. Pattern match — load pages whose path contains ':' (parametric templates)
+        var candidates = publishedOnly
+            ? await baseQuery.Where(p => p.Path.Contains(':') && p.Status == ContentStatus.Published).ToListAsync(ct)
+            : await baseQuery.Where(p => p.Path.Contains(':')).ToListAsync(ct);
+
+        var requestSegments = requestPath.Split('/', StringSplitOptions.None);
+
+        // Sort by specificity: fewer param segments = more specific = tried first
+        var ordered = candidates.OrderBy(p => p.Path.Count(c => c == ':'));
+
+        foreach (var candidate in ordered)
+        {
+            var patternSegments = candidate.Path.Split('/', StringSplitOptions.None);
+            if (patternSegments.Length != requestSegments.Length) continue;
+
+            var urlParams = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            var matched = true;
+
+            for (var i = 0; i < patternSegments.Length; i++)
+            {
+                var pattern = patternSegments[i];
+                if (pattern.StartsWith(':'))
+                    urlParams[pattern[1..]] = requestSegments[i];
+                else if (!string.Equals(pattern, requestSegments[i], StringComparison.OrdinalIgnoreCase))
+                { matched = false; break; }
+            }
+
+            if (matched) return (candidate, urlParams);
+        }
+
+        return null;
+    }
+
+    /// <inheritdoc/>
     public async Task<IReadOnlyList<Page>> GetPublishedPagesAsync(CancellationToken ct = default)
         => await DbSet
             .Where(p => p.Status == ContentStatus.Published)
+            .OrderBy(p => p.SortOrder)
             .ToListAsync(ct);
 
     public async Task<(IReadOnlyList<Page> Items, int Total)> GetPagedAsync(int page, int pageSize, CancellationToken ct = default)

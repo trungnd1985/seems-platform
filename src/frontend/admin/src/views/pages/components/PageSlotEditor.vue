@@ -17,6 +17,7 @@ import { SLOT_TARGET_TYPES } from '@/types/pages'
 import type { TemplateSlotDef } from '@/types/templates'
 import type { ContentItem } from '@/types/contentTypes'
 import type { Module } from '@/types/modules'
+import SlotParamsDialog from './SlotParamsDialog.vue'
 
 const props = defineProps<{
   page: Page
@@ -134,6 +135,23 @@ async function doAdd() {
     })
   } finally {
     adding.value = false
+  }
+}
+
+// ── Slot parameters dialog ────────────────────────────────────────────────────
+const paramsDialogVisible = ref(false)
+const paramsSlot = ref<SlotMapping | null>(null)
+
+function openParams(slot: SlotMapping) {
+  paramsSlot.value = slot
+  paramsDialogVisible.value = true
+}
+
+function onParamsSaved(slotId: string, params: Record<string, unknown> | null) {
+  const idx = slots.value.findIndex((s) => s.id === slotId)
+  if (idx !== -1) {
+    slots.value[idx] = { ...slots.value[idx], parameters: params }
+    emit('updated', slots.value)
   }
 }
 
@@ -282,21 +300,48 @@ function isLast(slot: SlotMapping): boolean {
         </template>
       </Column>
 
-      <Column header="" style="width: 50px">
+      <Column header="" style="width: 90px">
         <template #body="{ data }">
-          <Button
-            icon="pi pi-times"
-            text
-            rounded
-            size="small"
-            severity="danger"
-            :loading="removingId === data.id"
-            aria-label="Remove"
-            @click="doRemove(data.id)"
-          />
+          <div class="row-actions">
+            <Button
+              icon="pi pi-sliders-h"
+              text
+              rounded
+              size="small"
+              severity="secondary"
+              aria-label="Configure parameters"
+              v-tooltip.top="'Parameters'"
+              @click="openParams(data)"
+            />
+            <Button
+              icon="pi pi-times"
+              text
+              rounded
+              size="small"
+              severity="danger"
+              :loading="removingId === data.id"
+              aria-label="Remove"
+              @click="doRemove(data.id)"
+            />
+          </div>
         </template>
       </Column>
     </DataTable>
+
+    <SlotParamsDialog
+      v-if="paramsSlot"
+      :visible="paramsDialogVisible"
+      @update:visible="paramsDialogVisible = $event"
+      :page-id="page.id"
+      :slot-id="paramsSlot.id"
+      :slot-key="paramsSlot.slotKey"
+      :target-type="paramsSlot.targetType"
+      :module-default-parameters-json="paramsSlot.targetType === 'Module'
+        ? (modules.find(m => m.moduleKey === paramsSlot!.targetId)?.defaultParametersJson ?? null)
+        : null"
+      :initial-parameters="paramsSlot.parameters"
+      @saved="onParamsSaved(paramsSlot!.id, $event)"
+    />
 
     <!-- Add slot form -->
     <div class="add-slot-form">
@@ -434,6 +479,11 @@ function isLast(slot: SlotMapping): boolean {
 }
 
 .order-buttons {
+  display: flex;
+  gap: 0;
+}
+
+.row-actions {
   display: flex;
   gap: 0;
 }

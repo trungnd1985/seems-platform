@@ -14,10 +14,15 @@ public class GetPageBySlugHandler(
 {
     public async Task<PageDto?> Handle(GetPageBySlugQuery request, CancellationToken cancellationToken)
     {
-        var page = preview.IsPreview
-            ? await pageRepository.GetBySlugAsync(request.Slug, cancellationToken)
-            : await pageRepository.GetPublishedBySlugAsync(request.Slug, cancellationToken);
+        var result = await pageRepository.ResolveByPathAsync(
+            request.Slug, publishedOnly: !preview.IsPreview, cancellationToken);
 
-        return page is null ? null : mapper.Map<PageDto>(page);
+        if (result is null) return null;
+
+        var dto = mapper.Map<PageDto>(result.Value.Page);
+        if (result.Value.UrlParams.Count > 0)
+            dto.UrlParameters = result.Value.UrlParams;
+
+        return dto;
     }
 }

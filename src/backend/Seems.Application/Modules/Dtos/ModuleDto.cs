@@ -10,6 +10,7 @@ public class ModuleDto
     public string? PublicComponentUrl { get; set; }
     public string? Description { get; set; }
     public string? Author { get; set; }
+    public string? DefaultParametersJson { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
 }

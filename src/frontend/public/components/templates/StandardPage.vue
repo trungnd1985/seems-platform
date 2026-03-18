@@ -6,7 +6,7 @@ const props = defineProps<{
   slots: SlotMapping[]
 }>()
 
-function getSlotMappings(slotKey: string): SlotMapping[] {
+function getSlot(slotKey: string): SlotMapping[] {
   return props.slots
     .filter((s) => s.slotKey === slotKey)
     .sort((a, b) => a.order - b.order)
@@ -15,40 +15,58 @@ function getSlotMappings(slotKey: string): SlotMapping[] {
 
 <template>
   <div class="standard-page">
-    <section v-if="getSlotMappings('slider').length" class="slot-hero">
+    <!-- Full-width slider/hero -->
+    <section v-if="getSlot('slider').length" class="slot-slider">
       <SlotRenderer
-        v-for="mapping in getSlotMappings('slider')"
+        v-for="mapping in getSlot('slider')"
         :key="mapping.targetId"
         :mapping="mapping"
       />
     </section>
 
-    <div class="standard-page-body">
-      <div class="slot-main">
+    <!-- Intro bar (optional, full-width accent strip) -->
+    <section v-if="getSlot('intro').length" class="slot-intro">
+      <div class="container">
         <SlotRenderer
-          v-for="mapping in getSlotMappings('main')"
-          :key="mapping.targetId"
-          :mapping="mapping"
-        />
-        <SlotRenderer
-          v-for="mapping in getSlotMappings('body')"
+          v-for="mapping in getSlot('intro')"
           :key="mapping.targetId"
           :mapping="mapping"
         />
       </div>
+    </section>
 
-      <aside v-if="getSlotMappings('sidebar').length" class="slot-sidebar">
-        <SlotRenderer
-          v-for="mapping in getSlotMappings('sidebar')"
-          :key="mapping.targetId"
-          :mapping="mapping"
-        />
-      </aside>
+    <!-- Main content + optional sidebar -->
+    <div class="page-body">
+      <div class="container">
+        <div class="page-body-inner" :class="{ 'has-sidebar': getSlot('sidebar').length }">
+          <main class="slot-main">
+            <SlotRenderer
+              v-for="mapping in getSlot('main')"
+              :key="mapping.targetId"
+              :mapping="mapping"
+            />
+            <SlotRenderer
+              v-for="mapping in getSlot('body')"
+              :key="mapping.targetId"
+              :mapping="mapping"
+            />
+          </main>
+
+          <aside v-if="getSlot('sidebar').length" class="slot-sidebar">
+            <SlotRenderer
+              v-for="mapping in getSlot('sidebar')"
+              :key="mapping.targetId"
+              :mapping="mapping"
+            />
+          </aside>
+        </div>
+      </div>
     </div>
 
-    <section v-if="getSlotMappings('footer').length" class="slot-footer">
+    <!-- Full-width footer widget area -->
+    <section v-if="getSlot('footer').length" class="slot-footer-widgets">
       <SlotRenderer
-        v-for="mapping in getSlotMappings('footer')"
+        v-for="mapping in getSlot('footer')"
         :key="mapping.targetId"
         :mapping="mapping"
       />
@@ -57,23 +75,57 @@ function getSlotMappings(slotKey: string): SlotMapping[] {
 </template>
 
 <style scoped>
-.standard-page-body {
-  display: grid;
-  grid-template-columns: 1fr 300px;
-  gap: 2rem;
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 2rem 1rem;
-}
-
-.slot-hero,
-.slot-footer {
+.standard-page {
   width: 100%;
 }
 
-@media (max-width: 768px) {
-  .standard-page-body {
+/* ─── Slider ─── */
+.slot-slider {
+  width: 100%;
+}
+
+/* ─── Intro Bar ─── */
+.slot-intro {
+  background: #0088cc;
+  color: #fff;
+  padding: 18px 0;
+}
+
+/* ─── Page Body ─── */
+.page-body {
+  padding: 60px 0;
+}
+
+.page-body-inner {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 2.5rem;
+}
+
+.page-body-inner.has-sidebar {
+  grid-template-columns: 1fr 300px;
+}
+
+/* ─── Sidebar ─── */
+.slot-sidebar {
+  min-width: 0;
+}
+
+/* ─── Footer Widgets ─── */
+.slot-footer-widgets {
+  width: 100%;
+  background: var(--color-light, #f7f7f7);
+  border-top: 1px solid var(--color-border, #e9e9e9);
+}
+
+/* ─── Responsive ─── */
+@media (max-width: 991px) {
+  .page-body-inner.has-sidebar {
     grid-template-columns: 1fr;
   }
+}
+
+@media (max-width: 768px) {
+  .page-body { padding: 40px 0; }
 }
 </style>

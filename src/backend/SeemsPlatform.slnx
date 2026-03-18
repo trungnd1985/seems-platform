@@ -4,6 +4,8 @@
   <Project Path="Seems.Domain/Seems.Domain.csproj" />
   <Project Path="Seems.Infrastructure/Seems.Infrastructure.csproj" />
   <Project Path="Seems.Shared/Seems.Shared.csproj" />
-  <!-- Bundled logic modules -->
-  <Project Path="../../modules/slider/backend/Seems.Modules.Slider.csproj" />
+  <Folder Name="/modules/">
+    <Project Path="../modules/slider/backend/Seems.Modules.Slider.csproj" />
+    <Project Path="../modules/contact-form/backend/Seems.Modules.ContactForm.csproj" />
+  </Folder>
 </Solution>

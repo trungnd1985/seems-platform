@@ -13,6 +13,7 @@ export interface SlotMapping {
   targetType: 'Content' | 'Module'
   targetId: string
   order: number
+  parameters?: Record<string, unknown> | null
 }
 
 export interface Page {
@@ -26,4 +27,6 @@ export interface Page {
   status: 'draft' | 'published'
   createdAt: string
   updatedAt: string
+  /** Populated when the page was matched via a parametric path pattern (e.g. blog/:id). */
+  urlParameters?: Record<string, string> | null
 }

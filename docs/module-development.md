@@ -34,13 +34,12 @@ Require a dedicated class library. The platform auto-discovers and registers the
 ```
 src/modules/{key}/
 ├── manifest.json
-├── backend/
-│   └── Seems.Modules.{Key}/
-│       ├── Seems.Modules.{Key}.csproj    ← FrameworkReference: Microsoft.AspNetCore.App
-│       │                                    ProjectReference: Seems.Application
-│       ├── {Key}Module.cs                ← implements ISeemModule
-│       ├── {Key}Controller.cs
-│       └── {Key}Dtos.cs
+├── backend/                              ← C# files directly here (no extra subfolder)
+│   ├── Seems.Modules.{Key}.csproj        ← FrameworkReference: Microsoft.AspNetCore.App
+│   │                                        ProjectReference: Seems.Application
+│   ├── {Key}Module.cs                    ← implements ISeemModule
+│   ├── {Key}Controller.cs
+│   └── {Key}Dtos.cs
 └── frontend/
     └── public/
         ├── {Key}.vue                     ← SSR-safe component (no Nuxt auto-imports)
@@ -128,6 +127,7 @@ Do **not** use `{ "type": "object", "properties": {...} }` — the admin UI will
 | `slots` | `SlotDescriptor[]` | No | Slots this module can render into |
 | `contentTypes` | `ContentTypeDecl[]` | No | Content types registered on install (ContentSchema format) |
 | `apis` | `ApiRoute[]` | No | API routes exposed (documentation only, not enforced) |
+| `parameters` | `object` | No | Default slot parameters. Stored in `Module.DefaultParametersJson` (jsonb). The Admin slot editor pre-fills from this value when no parameters have been saved yet |
 
 ---
 
@@ -237,6 +237,7 @@ The public component renders inside a page slot on the Nuxt 3 public site. It is
 | No `window`, `document` at top level | The host Nuxt app runs SSR; top-level browser APIs break server rendering |
 | Use `onMounted` / `onUnmounted` for timers and event listeners | Standard Vue lifecycle |
 | Always receive `moduleKey: string` as a prop | Platform passes it when rendering the slot |
+| Accept `parameters?: Record<string, unknown> \| null` as a prop | `SlotRenderer` forwards the slot's saved parameters; use them to make the component configurable without a backend API call |
 
 ### Shared Vue Instance
 
@@ -270,7 +271,10 @@ export default _v
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue'
 
-const props = defineProps<{ moduleKey: string }>()
+const props = defineProps<{
+  moduleKey: string
+  parameters?: Record<string, unknown> | null
+}>()
 
 interface Slide {
   id: string
@@ -525,8 +529,10 @@ Page → Template → SlotRenderer
                                                     ├─ useModuleLoader("slider")
                                                     ├─ module-registry lookup
                                                     ├─ defineAsyncComponent(loader)
-                                                    └─ <Slider moduleKey="slider" />
+                                                    └─ <Slider moduleKey="slider" :parameters="slotMapping.parameters" />
 ```
+
+`SlotRenderer` always forwards `slotMapping.parameters` as the `parameters` prop. The module component decides how to use them (e.g. configure visible fields, override labels, set API filters).
 
 > **Note:** Module slots render **client-side only** (the plugin runs in the browser). They are excluded from SSR HTML. Use `ContentItem` slots for SEO-critical content.
 
@@ -622,5 +628,5 @@ export interface InstalledModule {
 | CSS not applied | Styles in separate `component.css` not loaded | Add `vite-plugin-css-injected-by-js` to vite.config |
 | `useFetch` is not defined | Using Nuxt auto-import in standalone ESM | Replace with `fetch()` inside `onMounted` |
 | Content type not appearing in Admin | Install did not register content types | Re-register: DELETE + POST /api/modules with `contentTypes[]` in body |
-| Configure gear icon not showing | No named route `module-{key}` registered | Add the route to `src/frontend/admin/src/router/index.ts` |
+| Configure gear icon not showing | No named route `module-{key}` registered | Add the route to `src/frontend/admin/src/router/index.ts`. `hasSettingsPage()` uses `router.resolve()` wrapped in try/catch (Vue Router 4 throws for unknown named routes) |
 | Admin content type fields empty | Schema uses standard JSON Schema instead of ContentSchema | Change schema to `{ "fields": [{ "name", "label", "type", "required" }] }` |

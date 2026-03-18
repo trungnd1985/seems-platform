@@ -185,8 +185,8 @@ function onSlugInput() {
   slugManuallyEdited.value = true
 }
 
-// Segment-only regex — no slashes allowed
-const SLUG_RE = /^[a-z0-9][a-z0-9_-]*$/
+// Static segment OR one or more :param segments (e.g. :id or :year/:month/:slug)
+const SLUG_RE = /^(:[a-z][a-z0-9-]*(\/:[a-z][a-z0-9-]*)*|[a-z0-9][a-z0-9_-]*)$/
 const slugInvalid = computed(() => form.slug.length > 0 && !SLUG_RE.test(form.slug))
 
 function canSubmit(): boolean {
@@ -285,11 +285,17 @@ function submit() {
                 The home page is resolved by the Default flag, not by slug.
               </small>
               <small v-else-if="slugInvalid" class="hint error">
-                Slug must be a single lowercase segment (e.g. <code>about-us</code>, <code>careers</code>).
-                No slashes — use the Parent field to build nested paths.
+                Slug must be a lowercase segment (e.g. <code>about-us</code>) or one or more
+                <code>:param</code> segments (e.g. <code>:id</code> or <code>:year/:month/:slug</code>).
               </small>
               <small v-else class="hint">
                 URL path: <code>{{ previewPath }}</code>
+              </small>
+              <small v-if="!page?.isDefault" class="hint slug-param-hint">
+                Tip: use <code>:paramName</code> for dynamic segments. Example — parent
+                <code>blog</code> + slug <code>:id</code> matches <code>/blog/123</code> and
+                exposes <code>urlParams.id = "123"</code> to your components.
+                Multiple: <code>:year/:month/:slug</code>.
               </small>
             </div>
 
@@ -515,5 +521,15 @@ function submit() {
 
 .hint.warn {
   color: var(--p-orange-500);
+}
+
+.slug-param-hint {
+  color: var(--p-text-muted-color);
+  font-size: 0.75rem;
+  border-left: 2px solid var(--p-surface-300);
+  padding-left: 0.5rem;
+  display: block;
+  margin-top: 0.25rem;
+  line-height: 1.5;
 }
 </style>

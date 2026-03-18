@@ -11,7 +11,8 @@ import type { Theme } from '@/types/themes'
 const props = defineProps<{
   visible: boolean
   template: Template | null
-  themes: Theme[]
+  themes?: Theme[]
+  lockedThemeKey?: string
 }>()
 
 const emit = defineEmits<{
@@ -25,11 +26,11 @@ const themeKey = ref('')
 const slots = ref<TemplateSlotDef[]>([])
 
 watch(
-  () => props.template,
-  (t) => {
+  () => [props.template, props.lockedThemeKey] as const,
+  ([t, locked]) => {
     key.value = t?.key ?? ''
     name.value = t?.name ?? ''
-    themeKey.value = t?.themeKey ?? ''
+    themeKey.value = locked ?? t?.themeKey ?? ''
     slots.value = t ? t.slots.map((s) => ({ ...s })) : []
   },
   { immediate: true },
@@ -38,7 +39,7 @@ watch(
 const isEdit = () => props.template !== null
 
 const themeOptions = () =>
-  props.themes.map((t) => ({ label: `${t.name} (${t.key})`, value: t.key }))
+  (props.themes ?? []).map((t) => ({ label: `${t.name} (${t.key})`, value: t.key }))
 
 function close() {
   emit('update:visible', false)
@@ -107,20 +108,25 @@ function submit() {
       </div>
 
       <div class="field">
-        <label for="tpl-theme">Theme <span class="required">*</span></label>
-        <Select
-          id="tpl-theme"
-          :modelValue="themeKey"
-          @update:modelValue="themeKey = $event"
-          :options="themeOptions()"
-          option-label="label"
-          option-value="value"
-          placeholder="Select a theme"
-          fluid
-        />
-        <small v-if="themes.length === 0" class="hint warn">
-          No themes available. Create a theme first.
-        </small>
+        <label>Theme <span class="required">*</span></label>
+        <template v-if="lockedThemeKey">
+          <code class="key-badge">{{ lockedThemeKey }}</code>
+        </template>
+        <template v-else>
+          <Select
+            id="tpl-theme"
+            :modelValue="themeKey"
+            @update:modelValue="themeKey = $event"
+            :options="themeOptions()"
+            option-label="label"
+            option-value="value"
+            placeholder="Select a theme"
+            fluid
+          />
+          <small v-if="(themes ?? []).length === 0" class="hint warn">
+            No themes available. Create a theme first.
+          </small>
+        </template>
       </div>
 
       <div class="field">
@@ -169,5 +175,14 @@ function submit() {
 
 .hint.warn {
   color: var(--p-orange-500);
+}
+
+.key-badge {
+  font-family: monospace;
+  font-size: 0.8125rem;
+  background: var(--p-surface-100);
+  border: 1px solid var(--p-surface-200);
+  border-radius: 4px;
+  padding: 0.125rem 0.375rem;
 }
 </style>

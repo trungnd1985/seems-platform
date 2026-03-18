@@ -19,11 +19,64 @@ function statusSeverity(status: string): string {
 }
 
 const toast = useToast()
-const { pages, treeNodes, loading, error, fetchPageTree, getPage, createPage, updatePage, deletePage, updatePageStatus, setDefaultPage } =
+const { pages, treeNodes, loading, error, fetchPageTree, getPage, createPage, updatePage, deletePage, updatePageStatus, reorderPages, setDefaultPage } =
   usePages()
 
 const settingDefaultId = ref<string | null>(null)
 const togglingStatusId = ref<string | null>(null)
+const movingId = ref<string | null>(null)
+
+// ── Sort helpers ──────────────────────────────────────────────────────────────
+function siblings(page: Page): Page[] {
+  return [...pages.value]
+    .filter((p) => p.parentId === page.parentId)
+    .sort((a, b) => a.sortOrder - b.sortOrder || a.title.localeCompare(b.title))
+}
+
+function isFirst(page: Page): boolean {
+  const s = siblings(page)
+  return s.length === 0 || s[0].id === page.id
+}
+
+function isLast(page: Page): boolean {
+  const s = siblings(page)
+  return s.length === 0 || s[s.length - 1].id === page.id
+}
+
+async function move(page: Page, direction: 'up' | 'down') {
+  const s = siblings(page)
+  const idx = s.findIndex((p) => p.id === page.id)
+  const targetIdx = direction === 'up' ? idx - 1 : idx + 1
+  if (targetIdx < 0 || targetIdx >= s.length) return
+
+  const swapWith = s[targetIdx]
+
+  // Ensure unique sort orders before swapping (normalise if siblings are equal)
+  const needsNormalise = s.some((p, i) => i > 0 && p.sortOrder === s[i - 1].sortOrder)
+  if (needsNormalise) {
+    s.forEach((p, i) => { p.sortOrder = i * 10 })
+  }
+
+  const items = [
+    { pageId: page.id, sortOrder: swapWith.sortOrder },
+    { pageId: swapWith.id, sortOrder: page.sortOrder },
+  ]
+
+  movingId.value = page.id
+  try {
+    await reorderPages(items)
+    await fetchPageTree()
+  } catch (e: any) {
+    toast.add({
+      severity: 'error',
+      summary: 'Failed to reorder',
+      detail: e.response?.data?.message ?? 'Error.',
+      life: 4000,
+    })
+  } finally {
+    movingId.value = null
+  }
+}
 
 async function doTogglePublish(page: Page) {
   const next = page.status === 'Published' ? 'Draft' : 'Published'
@@ -224,9 +277,33 @@ function cancelDelete() {
         </template>
       </Column>
 
-      <Column header="Actions" style="width: 210px">
+      <Column header="Actions" style="width: 260px">
         <template #body="{ node }">
           <div class="actions">
+            <Button
+              icon="pi pi-chevron-up"
+              text
+              rounded
+              size="small"
+              severity="secondary"
+              aria-label="Move up"
+              v-tooltip.top="'Move up'"
+              :disabled="isFirst(node.data)"
+              :loading="movingId === node.data.id"
+              @click="move(node.data, 'up')"
+            />
+            <Button
+              icon="pi pi-chevron-down"
+              text
+              rounded
+              size="small"
+              severity="secondary"
+              aria-label="Move down"
+              v-tooltip.top="'Move down'"
+              :disabled="isLast(node.data)"
+              :loading="movingId === node.data.id"
+              @click="move(node.data, 'down')"
+            />
             <Button
               :icon="node.data.status === 'Published' ? 'pi pi-eye-slash' : 'pi pi-send'"
               text

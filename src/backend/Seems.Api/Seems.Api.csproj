@@ -5,6 +5,7 @@
     <ProjectReference Include="..\Seems.Infrastructure\Seems.Infrastructure.csproj" />
     <!-- Bundled logic modules — add one reference per module with custom backend -->
     <ProjectReference Include="..\..\modules\slider\backend\Seems.Modules.Slider.csproj" />
+    <ProjectReference Include="..\..\modules\contact-form\backend\Seems.Modules.ContactForm.csproj" />
   </ItemGroup>
 
   <ItemGroup>

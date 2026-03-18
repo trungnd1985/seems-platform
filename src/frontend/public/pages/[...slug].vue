@@ -22,6 +22,10 @@ if (page.value) {
 
 useTheme(page.value?.themeKey)
 
+// Make URL parameters available to all descendant components (templates, slot renderers, modules).
+// Inject with: const urlParams = inject('urlParams', {} as Record<string, string>)
+provide('urlParams', page.value?.urlParameters ?? {})
+
 const templateComponent = computed(() => {
   if (!page.value) return null
   return useTemplateResolver(page.value.templateKey, page.value.themeKey)

@@ -26,6 +26,7 @@ const publicComponentUrl = ref('')
 const description = ref('')
 const author = ref('')
 const contentTypes = ref<ContentTypeDecl[]>([])
+const defaultParametersJson = ref<string | null>(null)
 const manifestJson = ref('')
 const manifestError = ref<string | null>(null)
 const submitting = ref(false)
@@ -48,6 +49,7 @@ watch(
       description.value = props.module.description ?? ''
       author.value = props.module.author ?? ''
       contentTypes.value = []
+      defaultParametersJson.value = null
     } else {
       moduleKey.value = ''
       name.value = ''
@@ -56,6 +58,7 @@ watch(
       description.value = ''
       author.value = ''
       contentTypes.value = []
+      defaultParametersJson.value = null
     }
   },
 )
@@ -103,6 +106,9 @@ function parseManifest() {
         schema: typeof ct.schema === 'string' ? ct.schema : JSON.stringify(ct.schema),
       }))
     }
+    if (m.parameters && typeof m.parameters === 'object') {
+      defaultParametersJson.value = JSON.stringify(m.parameters)
+    }
     manifestJson.value = ''
   } catch {
     manifestError.value = 'Invalid JSON — paste the full contents of manifest.json.'
@@ -140,6 +146,7 @@ async function submit() {
         description: description.value.trim() || undefined,
         author: author.value.trim() || undefined,
         contentTypes: contentTypes.value.length ? contentTypes.value : undefined,
+        defaultParametersJson: defaultParametersJson.value ?? undefined,
       }
       emit('saved', payload)
     }

@@ -526,6 +526,9 @@ namespace Seems.Infrastructure.Persistence.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<string>("DefaultParametersJson")
+                        .HasColumnType("jsonb");
+
                     b.Property<string>("Description")
                         .HasMaxLength(512)
                         .HasColumnType("character varying(512)");
@@ -673,6 +676,9 @@ namespace Seems.Infrastructure.Persistence.Migrations
 
                     b.Property<Guid>("PageId")
                         .HasColumnType("uuid");
+
+                    b.Property<string>("Parameters")
+                        .HasColumnType("jsonb");
 
                     b.Property<string>("SlotKey")
                         .IsRequired()

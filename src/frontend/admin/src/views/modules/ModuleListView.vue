@@ -20,7 +20,11 @@ const auth = useAuthStore()
 const isAdmin = computed(() => auth.user?.roles.includes('Admin') ?? false)
 
 function hasSettingsPage(moduleKey: string): boolean {
-  return router.resolve({ name: `module-${moduleKey}` }).matched.length > 0
+  try {
+    return router.resolve({ name: `module-${moduleKey}` }).matched.length > 0
+  } catch {
+    return false
+  }
 }
 
 const { modules, loading, error, fetchModules, registerModule, updateModule, setStatus, deleteModule } =
